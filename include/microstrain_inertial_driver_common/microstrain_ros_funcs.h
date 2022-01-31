@@ -99,7 +99,10 @@ template <class MessageType>
 std::shared_ptr<::ros::Publisher> create_publisher(RosNodeType* node, const std::string& topic,
                                                    const uint32_t queue_size)
 {
-  return std::make_shared<::ros::Publisher>(node->template advertise<MessageType>(topic, queue_size));
+  MICROSTRAIN_INFO(node, "!!! Publishing to topic %s", topic.c_str());
+  auto ret = std::make_shared<::ros::Publisher>(node->template advertise<MessageType>(topic, queue_size));
+  MICROSTRAIN_INFO(node, "!!! Topic on resulting publisher %s", ret->getTopic().c_str());
+  return ret;
 }
 
 /**

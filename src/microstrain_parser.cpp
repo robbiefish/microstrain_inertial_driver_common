@@ -947,7 +947,9 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
   // Publish
   if (config_->publish_filter_)
   {
+    MICROSTRAIN_INFO(node_, "??? Publishing filtered IMU");
     publishers_->filtered_imu_pub_->publish(publishers_->filtered_imu_msg_);
+    MICROSTRAIN_INFO(node_, "??? Published filtered IMU");
     publishers_->filter_pub_->publish(publishers_->filter_msg_);
     publishers_->filter_status_pub_->publish(publishers_->filter_status_msg_);
     publishers_->filter_heading_pub_->publish(publishers_->filter_heading_msg_);
@@ -955,6 +957,10 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
 
     if (config_->publish_gnss_dual_antenna_status_ && gnss_dual_antenna_status_received)
       publishers_->gnss_dual_antenna_status_pub_->publish(publishers_->gnss_dual_antenna_status_msg_);
+  }
+  else
+  {
+    MICROSTRAIN_INFO(node_, "??? Not publishing any filter data");
   }
 
   if (config_->publish_filter_relative_pos_)
