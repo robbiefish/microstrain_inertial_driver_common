@@ -1175,6 +1175,27 @@ void MicrostrainParser::parseGNSSPacket(const mscl::MipDataPacket& packet, int g
           else
             publishers_->gnss_odom_msg_[gnss_id].twist.twist.linear.z = down_velocity;
         }
+        else if (point.qualifier() == mscl::MipTypes::CH_HEADING)
+        {
+          float gnss_heading_rad = point.as_float() * (M_PI / 180);
+
+          if (config_->use_enu_frame_)
+          {
+            gnss_heading_rad = M_PI / 2.0 - gnss_heading_rad;
+            if (gnss_heading_rad > M_PI)
+              gnss_heading_rad -= 2.0 * M_PI;
+            else if (gnss_heading_rad < -M_PI)
+              gnss_heading_rad += 2.0 * M_PI;
+          }
+
+          tf2::Quaternion gnss_heading_quat;
+          gnss_heading_quat.setEuler(0, 0, gnss_heading_rad);
+          publishers_->gnss_odom_msg_[gnss_id].pose.pose.orientation = tf2::toMsg(gnss_heading_quat);
+        }
+        else if (point.qualifier() == mscl::MipTypes::CH_HEADING_UNCERTAINTY)
+        {
+          publishers_->gnss_odom_msg_[gnss_id].pose.covariance[35] = pow(point.as_float() * (M_PI / 180), 2);
+        }
         else if (point.qualifier() == mscl::MipTypes::CH_SPEED_ACCURACY)
         {
           float speed_cov = pow(point.as_float(), 2);
