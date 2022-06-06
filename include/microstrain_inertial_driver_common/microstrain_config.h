@@ -32,6 +32,24 @@ const std::vector<double> DEFAULT_QUATERNION = { 4.0, 0.0 };
 
 static constexpr int DEFAULT_DATA_RATE = -1;  // If a data rate is set to this, the data rate will be set to the default data rate
 
+static constexpr auto EVENT_TRIGGER_TYPE_GPIO = "GPIO";
+static constexpr auto EVENT_TRIGGER_TYPE_THRESHOLD = "THRESHOLD";
+
+static constexpr auto EVENT_TRIGGER_GPIO_MODE_DISABLED = "DISABLED";
+static constexpr auto EVENT_TRIGGER_GPIO_MODE_HIGH = "HIGH";
+static constexpr auto EVENT_TRIGGER_GPIO_MODE_LOW = "LOW";
+static constexpr auto EVENT_TRIGGER_GPIO_MODE_EDGE = "EDGE";
+
+static constexpr auto EVENT_ACTION_TYPE_GPIO = "GPIO";
+static constexpr auto EVENT_ACTION_TYPE_MESSAGE = "MESSAGE";
+
+static constexpr auto EVENT_ACTION_GPIO_MODE_DISABLED = "DISABLED";
+static constexpr auto EVENT_ACTION_GPIO_MODE_ACTIVE_HIGH = "ACTIVE_HIGH";
+static constexpr auto EVENT_ACTION_GPIO_MODE_ACTIVE_LOW = "ACTIVE_LOW";
+static constexpr auto EVENT_ACTION_GPIO_MODE_ONESHOT_HIGH = "ONESHOT_HIGH";
+static constexpr auto EVENT_ACTION_GPIO_MODE_ONESHOT_LOW = "ONESHOT_LOW";
+static constexpr auto EVENT_ACTION_GPIO_MODE_TOGGLE = "TOGGLE";
+
 /**
  * Contains configuration information for the node, configures the device on startup
  *  This class holds the pointer to the MSCL device, so any communication to the device should be done through this class
@@ -145,6 +163,13 @@ public:
    * \return true if configuration was successful and false if configuration failed
    */
   bool configureSensor2vehicle(RosNodeType* node);
+
+  /**
+   * \brief Configures events on the inertial device
+   * \param node  The ROS node that contains configuration information. For ROS1 this is the private node handle ("~")
+   * \return true if configuration was successful and false if configuration failed
+   */
+  bool configureEvents(RosNodeType* node);
 
   // Device pointer used to interact with the device
   std::unique_ptr<mscl::InertialNode> inertial_device_;
@@ -282,6 +307,9 @@ public:
   bool raw_file_enable_;
   bool raw_file_include_support_data_;
   std::ofstream raw_file_;
+
+  // Event parameters
+  bool event_setup_;
 
 private:
   /**

@@ -18,6 +18,10 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <algorithm>
+
+#include <yaml-cpp/yaml.h>
+
 #include "microstrain_inertial_driver_common/microstrain_config.h"
 
 namespace microstrain
@@ -150,6 +154,9 @@ bool MicrostrainConfig::configure(RosNodeType* node)
   // Raw data file save
   get_param<bool>(node, "raw_file_enable", raw_file_enable_, false);
   get_param<bool>(node, "raw_file_include_support_data", raw_file_include_support_data_, false);
+
+  // Event setup
+  get_param<bool>(node, "event_setup", event_setup_, false);
 
   MICROSTRAIN_INFO(node_, "Using MSCL Version: %s", mscl::MSCL_VERSION.str().c_str());
 
@@ -375,6 +382,11 @@ bool MicrostrainConfig::setupDevice(RosNodeType* node)
       MICROSTRAIN_ERROR(node_, "**The device does not support the factory streaming channels setup command!");
     }
   }
+
+  // Event setup
+  if (event_setup_)
+    if (!configureEvents(node))
+      return false;
 
   // Save the settings to the device, if enabled
   if (save_settings)
@@ -1262,6 +1274,158 @@ bool MicrostrainConfig::configureSensor2vehicle(RosNodeType* node)
     {
       MICROSTRAIN_ERROR(node_, "**Failed to set sensor2vehicle frame transformation with quaternion!");
       return false;
+    }
+  }
+  return true;
+}
+
+bool MicrostrainConfig::configureEvents(RosNodeType* node)
+{
+  // Read the event config and attempt to parse it as JSON
+  std::string event_config;
+  get_param<std::string>(node, "event_config", event_config, "");
+  YAML::Node event_config_yml;
+  try
+  {
+    event_config_yml = YAML::Load(event_config);
+  }
+  catch (const YAML::Exception& e)
+  {
+    MICROSTRAIN_ERROR(node_, "Encountered error while parsing event config YML");
+    MICROSTRAIN_ERROR(node_, "  Error %s", e.what());
+    return false;
+  }
+
+  // Loop through each of the config entries
+  if (!event_config_yml.IsSequence())
+  {
+    MICROSTRAIN_ERROR(node_, "Event config must be an array of objects");
+    return false;
+  }
+  if (event_config_yml.size() > 12)
+  {
+    MICROSTRAIN_ERROR(node_, "Event config array contains %lu objects, but can only contain a maximum of %d", event_config_yml.size(), 12);
+    return false;
+  }
+  for (uint8_t i = 0; i < event_config_yml.size(); i++)
+  {
+    // Get the element in the array
+    const auto& event_config_entry = event_config_yml[i];
+
+    // Find the required entries
+    const auto& trigger_entry = event_config_entry["trigger"];
+    const auto& action_entry = event_config_entry["action"];
+    if (!trigger_entry || !trigger_entry.IsMap() || !action_entry || !action_entry.IsMap())
+    {
+      MICROSTRAIN_ERROR(node_, "Entry must contain a \"trigger\" map, and \"action\" map, but is missing one of those, skipping entry");
+      continue;
+    }
+
+    // Get the type of the trigger and the relevant configuration
+    const auto& trigger_type_entry = trigger_entry["type"];
+    const auto& trigger_config_entry = trigger_entry["config"];
+    if (!trigger_type_entry || !trigger_config_entry || !trigger_config_entry.IsMap())
+    {
+      MICROSTRAIN_ERROR(node_, "Trigger must contain a \"type\" string, and \"config\" map, but is missing one of those, skipping entry");
+      continue;
+    }
+
+    // Get the type of the action and the relevant configuration
+    const auto& action_type_entry = action_entry["type"];
+    const auto& action_config_entry = action_entry["config"];
+    if (!action_type_entry || !action_config_entry || !action_config_entry.IsMap())
+    {
+      MICROSTRAIN_ERROR(node_, "Action must contain a \"type\" string, and \"config\" map, but is missing one of those, skipping entry");
+      continue;
+    }
+
+    // Get infomration on the trigger and use that to configure the device
+    std::string trigger_type = trigger_type_entry.as<std::string>();
+    std::transform(trigger_type.begin(), trigger_type.end(), trigger_type.begin(), ::toupper); // Capitalize the trigger type
+    if (trigger_type == EVENT_TRIGGER_TYPE_GPIO)
+    {
+      const auto& trigger_gpio_pin_entry = trigger_config_entry["pin"];
+      const auto& trigger_gpio_mode_entry = trigger_config_entry["mode"];
+      if (!trigger_gpio_pin_entry || !trigger_gpio_mode_entry)
+      {
+        MICROSTRAIN_ERROR(node_, "GPIO trigger config must containe a \"pin\" string, and \"mode\" string, but is missing one of those, skipping entry");
+        continue;
+      }
+
+      // Parse the yml values into values that can be understood my MSCL
+      const uint8_t trigger_gpio_pin = trigger_gpio_pin_entry.as<uint8_t>();
+      std::string trigger_gpio_mode = trigger_gpio_mode_entry.as<std::string>();
+      std::transform(trigger_gpio_mode.begin(), trigger_gpio_mode.end(), trigger_gpio_mode.begin(), ::toupper);  // Capitalize the GPIO mode
+      if (trigger_gpio_mode == EVENT_TRIGGER_GPIO_MODE_DISABLED)
+        int a;  // TODO(robbiefish): Assign the proper enum here
+      else if (trigger_gpio_mode == EVENT_TRIGGER_GPIO_MODE_HIGH)
+        int a;
+      else if (trigger_gpio_mode == EVENT_TRIGGER_GPIO_MODE_LOW)
+        int a;
+      else if (trigger_gpio_mode == EVENT_TRIGGER_GPIO_MODE_EDGE)
+        int a;
+      else
+      {
+        MICROSTRAIN_ERROR(node_, "Event mode %s not recognized, skipping entry", trigger_gpio_mode.c_str());
+        continue;
+      }
+
+      // TODO(robbiefish): Send the command to the device
+    }
+    else if (trigger_type == EVENT_TRIGGER_TYPE_THRESHOLD)
+    {
+      // TODO(robbiefish): Figure out how to implement this so it's not incredibly confusing
+    }
+    else
+    {
+      MICROSTRAIN_ERROR(node_, "Trigger type %s not recognized, skipping entry", trigger_type.c_str());
+      continue;
+    }
+
+    // Get the action configuration and use that to configure the device
+    std::string action_type = action_type_entry.as<std::string>();
+    std::transform(action_type.begin(), action_type.end(), action_type.begin(), ::toupper); // Capitalize the action type
+    if (action_type == EVENT_ACTION_TYPE_GPIO)
+    {
+      const auto& action_gpio_pin_entry = action_config_entry["pin"];
+      const auto& action_gpio_mode_entry = action_config_entry["mode"];
+      if (!action_gpio_pin_entry || !action_gpio_mode_entry)
+      {
+        MICROSTRAIN_ERROR(node_, "GPIO actin config must containe a \"pin\" string, and \"mode\" string, but is missing one of those, skipping entry");
+        continue;
+      }
+
+      // Parse the yml values into values that can be understood my MSCL
+      const uint8_t action_gpio_pin = action_gpio_pin_entry.as<uint8_t>();
+      std::string action_gpio_mode = action_gpio_mode_entry.as<std::string>();
+      std::transform(action_gpio_mode.begin(), action_gpio_mode.end(), action_gpio_mode.begin(), ::toupper);  // Capitalize the GPIO mode
+      if (action_gpio_mode == EVENT_ACTION_GPIO_MODE_DISABLED)
+        int a;  // TODO(robbiefish): Assign the proper enum
+      else if (action_gpio_mode == EVENT_ACTION_GPIO_MODE_ACTIVE_HIGH)
+        int a;
+      else if (action_gpio_mode == EVENT_ACTION_GPIO_MODE_ACTIVE_LOW)
+        int a;
+      else if (action_gpio_mode == EVENT_ACTION_GPIO_MODE_ONESHOT_HIGH)
+        int a;
+      else if (action_gpio_mode == EVENT_ACTION_GPIO_MODE_ONESHOT_LOW)
+        int a;
+      else if (action_gpio_mode == EVENT_ACTION_GPIO_MODE_TOGGLE)
+        int a;
+      else
+      {
+        MICROSTRAIN_ERROR(node_, "Action type %s not recognized, skipping entry", action_type.c_str());
+      }
+
+      // TODO(robbiefish): Send the command to the device
+    }
+    else if (action_type == EVENT_ACTION_TYPE_MESSAGE)
+    {
+      // TODO(robbiefish): Pickup here
+    }
+    else
+    {
+      MICROSTRAIN_ERROR(node_, "Action type %s not recognized, skipping entry", action_type.c_str());
+      continue;
     }
   }
   return true;

@@ -395,3 +395,22 @@ filter_gnss_antenna_cal_max_offset : 0.1
 #    6 - GPIO 3 (provided by external source if supported)
 #    7 - GPIO 4 (provided by external source if supported)
 filter_pps_source : 1
+
+# (CV7 only) Event mapping
+# The event system can be used to trigger an "action" based on a "trigger".
+# Available trigger types (case insensitive): GPIO, THRESHOLD
+# Available action types (case insensitive): GPIO, MESSAGE
+#    trigger.type = 
+event_setup : True
+event_config : |  # Please note that this '|'' symbol MUST be here or ROS will attempt to parse the yaml string below which will cause the node to crash
+  - trigger:
+      type: "GPIO"
+      config:
+        pin: 1
+        mode: "HIGH"
+    action:
+      type: "MESSAGE"
+      config:
+        topic: "/imu/data/gpio_high"
+        message_type: imu_data
+        sample_rate: 0
