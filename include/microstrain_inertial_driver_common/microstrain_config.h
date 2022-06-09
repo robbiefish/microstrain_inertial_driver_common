@@ -311,6 +311,11 @@ public:
   // Event parameters
   bool event_setup_;
 
+  // TODO(robbiefish): We need a better way to handle multiple message types here
+  uint8_t time_reference_event_id_;
+  TimeReferenceMsg time_reference_msg_;
+  TimeReferencePubType time_reference_pub_ = nullptr;
+
 private:
   /**
    * \brief Gets the raw value of a data rate parameter, or populates the parameter with the default data rate if it is set to the default value

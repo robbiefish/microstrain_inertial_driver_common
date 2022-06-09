@@ -155,6 +155,20 @@ void MicrostrainParser::parseIMUPacket(const mscl::MipDataPacket& packet)
   // Update the diagnostics
   imu_valid_packet_count_++;
 
+  // Act diferently if this is an event
+  // TODO(robbiefish): How do we implement this so it scales with multiple message types??
+  if (packet.shared().eventSource() != mscl::MipSharedDataFields::EVENT_SOURCE_NONE && packet.shared().eventSource() != mscl::MipSharedDataFields::EVENT_SOURCE_UNKNOWN)
+  {
+    if (packet.shared().eventSource() == config_->time_reference_event_id_)
+    {
+      config_->time_reference_msg_.header.stamp = to_ros_time(packet.collectedTimestamp().nanoseconds());
+      config_->time_reference_msg_.time_ref = to_ros_time(packet.deviceTimestamp().nanoseconds());
+      config_->time_reference_msg_.source = "CV7";
+      config_->time_reference_pub_->publish(config_->time_reference_msg_);
+      return;
+    }
+  }
+
   // Handle time
   const RosTimeType packet_time = getPacketTimestamp(packet);
 

@@ -220,7 +220,7 @@ filter_reset_after_config : True
 filter_auto_init : True
 
 # (All, except -10, and -15 products) Declination Source 1 = None, 2 = magnetic model, 3 = manual 
-filter_declination_source : 2
+filter_declination_source : 1
 filter_declination        : 0.23
 
 # (All, except GQ7, -10, and -15 products) Heading Source 0 = None, 1 = magnetic, 2 = GNSS velocity (note: see manual for limitations)  
@@ -406,11 +406,11 @@ event_config : |  # Please note that this '|'' symbol MUST be here or ROS will a
   - trigger:
       type: "GPIO"
       config:
-        pin: 1
+        pin: 2
         mode: "HIGH"
     action:
       type: "MESSAGE"
       config:
-        topic: "/imu/data/gpio_high"
+        topic: "/cv7/timestamp"
         message_type: imu_data
         sample_rate: 0

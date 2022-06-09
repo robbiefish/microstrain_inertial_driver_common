@@ -1342,6 +1342,8 @@ bool MicrostrainConfig::configureEvents(RosNodeType* node)
     // Get infomration on the trigger and use that to configure the device
     std::string trigger_type = trigger_type_entry.as<std::string>();
     std::transform(trigger_type.begin(), trigger_type.end(), trigger_type.begin(), ::toupper); // Capitalize the trigger type
+    mscl::EventTriggerConfiguration event_trigger_config;
+    event_trigger_config.instance = i + 1;
     if (trigger_type == EVENT_TRIGGER_TYPE_GPIO)
     {
       const auto& trigger_gpio_pin_entry = trigger_config_entry["pin"];
@@ -1357,20 +1359,20 @@ bool MicrostrainConfig::configureEvents(RosNodeType* node)
       std::string trigger_gpio_mode = trigger_gpio_mode_entry.as<std::string>();
       std::transform(trigger_gpio_mode.begin(), trigger_gpio_mode.end(), trigger_gpio_mode.begin(), ::toupper);  // Capitalize the GPIO mode
       if (trigger_gpio_mode == EVENT_TRIGGER_GPIO_MODE_DISABLED)
-        int a;  // TODO(robbiefish): Assign the proper enum here
+        event_trigger_config.parameters.gpio.mode = mscl::EventTriggerGpioParameter::DISABLED;
       else if (trigger_gpio_mode == EVENT_TRIGGER_GPIO_MODE_HIGH)
-        int a;
+        event_trigger_config.parameters.gpio.mode = mscl::EventTriggerGpioParameter::WHILE_HIGH;
       else if (trigger_gpio_mode == EVENT_TRIGGER_GPIO_MODE_LOW)
-        int a;
+        event_trigger_config.parameters.gpio.mode = mscl::EventTriggerGpioParameter::WHILE_LOW;
       else if (trigger_gpio_mode == EVENT_TRIGGER_GPIO_MODE_EDGE)
-        int a;
+        event_trigger_config.parameters.gpio.mode = mscl::EventTriggerGpioParameter::EDGE;
       else
       {
         MICROSTRAIN_ERROR(node_, "Event mode %s not recognized, skipping entry", trigger_gpio_mode.c_str());
         continue;
       }
-
-      // TODO(robbiefish): Send the command to the device
+      event_trigger_config.parameters.gpio.pin = trigger_gpio_pin;
+      event_trigger_config.trigger = mscl::EventTriggerConfiguration::GPIO_TRIGGER;
     }
     else if (trigger_type == EVENT_TRIGGER_TYPE_THRESHOLD)
     {
@@ -1381,17 +1383,29 @@ bool MicrostrainConfig::configureEvents(RosNodeType* node)
       MICROSTRAIN_ERROR(node_, "Trigger type %s not recognized, skipping entry", trigger_type.c_str());
       continue;
     }
+    try
+    {
+      inertial_device_->setEventTriggerConfig(event_trigger_config);
+    }
+    catch (mscl::Error& e)
+    {
+      MICROSTRAIN_ERROR(node_, "Unable to configure trigger %d of type %s", i, trigger_type.c_str());
+      continue;
+    }
 
     // Get the action configuration and use that to configure the device
     std::string action_type = action_type_entry.as<std::string>();
     std::transform(action_type.begin(), action_type.end(), action_type.begin(), ::toupper); // Capitalize the action type
+    mscl::EventActionConfiguration event_action_config;
+    event_action_config.instance = i + 1;
+    event_action_config.trigger = i + 1;
     if (action_type == EVENT_ACTION_TYPE_GPIO)
     {
       const auto& action_gpio_pin_entry = action_config_entry["pin"];
       const auto& action_gpio_mode_entry = action_config_entry["mode"];
       if (!action_gpio_pin_entry || !action_gpio_mode_entry)
       {
-        MICROSTRAIN_ERROR(node_, "GPIO actin config must containe a \"pin\" string, and \"mode\" string, but is missing one of those, skipping entry");
+        MICROSTRAIN_ERROR(node_, "GPIO actin config must contain a \"pin\" string, and \"mode\" string, but is missing one of those, skipping entry");
         continue;
       }
 
@@ -1415,18 +1429,49 @@ bool MicrostrainConfig::configureEvents(RosNodeType* node)
       {
         MICROSTRAIN_ERROR(node_, "Action type %s not recognized, skipping entry", action_type.c_str());
       }
-
-      // TODO(robbiefish): Send the command to the device
     }
     else if (action_type == EVENT_ACTION_TYPE_MESSAGE)
     {
-      // TODO(robbiefish): Pickup here
+      const auto& topic_entry = action_config_entry["topic"];
+      const auto& message_type_entry = action_config_entry["message_type"];
+      const auto& sample_rate_entry = action_config_entry["sample_rate"];
+      if (!topic_entry || !message_type_entry || !sample_rate_entry)
+      {
+        MICROSTRAIN_ERROR(node_, "Message action config must contain a \"topic\", \"message_type\" string and \"sample_rate\" number");
+        continue;
+      }
+
+      // Parse the yml values into values that MSCL can understand
+      // TODO(robbiefish): Right now we will just provide date messages, but we need to allow users to configure more about the action
+      event_action_config.parameters.message.setChannelFields(mscl::MipTypes::DataClass::CLASS_AHRS_IMU, {
+        mscl::MipTypes::ChannelField::CH_FIELD_SENSOR_INTERNAL_TIMESTAMP
+      });
+      time_reference_event_id_ = i;
+      time_reference_pub_ = create_publisher<TimeReferenceMsg>(node_, topic_entry.as<std::string>(), 10);
+
+      const size_t sample_rate = sample_rate_entry.as<size_t>();
+      if (sample_rate == 0)
+        event_action_config.parameters.message.sampleRate = mscl::SampleRate::Event();
+      else
+        event_action_config.parameters.message.sampleRate = mscl::SampleRate::Hertz(sample_rate);
+
+      event_action_config.type = mscl::EventActionConfiguration::MESSAGE;
     }
     else
     {
       MICROSTRAIN_ERROR(node_, "Action type %s not recognized, skipping entry", action_type.c_str());
       continue;
     }
+    try
+    {
+      inertial_device_->setEventActionConfig(event_action_config);
+    }
+    catch (const mscl::Error& e)
+    {
+      MICROSTRAIN_ERROR(node_, "Unable to configure action %d of type %s", i, action_type.c_str());
+      continue;
+    }
+    
   }
   return true;
 }
