@@ -49,6 +49,7 @@ public:
 
   // IMU Publishers
   ImuPubType imu_pub_ = nullptr;
+  TimeReferencePubType imu_time_pub_ = nullptr;
   MagneticFieldPubType mag_pub_ = nullptr;
   GPSCorrelationTimestampStampedPubType gps_corr_pub_ = nullptr;
 
@@ -84,6 +85,7 @@ public:
 
   // IMU Messages
   ImuMsg imu_msg_;
+  TimeReferenceMsg imu_time_msg_;
   MagneticFieldMsg mag_msg_;
   GPSCorrelationTimestampStampedMsg gps_corr_msg_;
 

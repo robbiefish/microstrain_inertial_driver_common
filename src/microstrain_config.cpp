@@ -62,6 +62,7 @@ bool MicrostrainConfig::configure(RosNodeType* node)
   // IMU
   get_param<bool>(node, "publish_imu", publish_imu_, true);
   get_param<bool>(node, "publish_gps_corr", publish_gps_corr_, false);
+  get_param<bool>(node, "publish_internal_time_ref", publish_internal_time_ref_, false);
   get_param<int32_t>(node, "imu_data_rate", imu_data_rate_, 10);
   get_param<std::vector<double>>(node, "imu_orientation_cov", imu_orientation_cov_, DEFAULT_MATRIX);
   get_param<std::vector<double>>(node, "imu_linear_cov", imu_linear_cov_, DEFAULT_MATRIX);
@@ -561,6 +562,8 @@ bool MicrostrainConfig::configureIMUDataRates()
     mscl::MipTypes::ChannelField::CH_FIELD_SENSOR_SCALED_GYRO_VEC,
     mscl::MipTypes::ChannelField::CH_FIELD_SENSOR_ORIENTATION_QUATERNION,
   };
+  if (publish_internal_time_ref_)
+    imu_raw_fields.push_back(mscl::MipTypes::ChannelField::CH_FIELD_SENSOR_SHARED_REFERENCE_TIMESTAMP);
   getSupportedMipChannels(mscl::MipTypes::DataClass::CLASS_AHRS_IMU, imu_raw_fields, imu_raw_data_rate_, &channels_to_stream);
 
   // Streaming for /mag message
@@ -1446,7 +1449,7 @@ bool MicrostrainConfig::configureEvents(RosNodeType* node)
       // Parse the yml values into values that MSCL can understand
       // TODO(robbiefish): Right now we will just provide date messages, but we need to allow users to configure more about the action
       event_action_config.parameters.message.setChannelFields(mscl::MipTypes::DataClass::CLASS_AHRS_IMU, {
-        mscl::MipTypes::ChannelField::CH_FIELD_SENSOR_INTERNAL_TIMESTAMP
+        mscl::MipTypes::ChannelField::CH_FIELD_SENSOR_SHARED_REFERENCE_TIMESTAMP
       });
       time_reference_event_id_ = i;
       time_reference_pub_ = create_publisher<TimeReferenceMsg>(node_, topic_entry.as<std::string>(), 10);

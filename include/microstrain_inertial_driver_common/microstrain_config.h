@@ -229,6 +229,7 @@ public:
   // Publish data flags
   bool publish_imu_;
   bool publish_gps_corr_;
+  bool publish_internal_time_ref_;
   bool publish_gnss_[NUM_GNSS];
   bool publish_gnss_dual_antenna_status_;
   bool publish_filter_;

@@ -113,6 +113,12 @@ imu_angular_cov     : [0.01, 0, 0, 0, 0.01, 0, 0, 0, 0.01]
 # (see: filter_enable_external_gps_time_update) 
 publish_gps_corr : False
 
+# If enabled, this message can be used to synchronize the internal timestamp of the device with the collected timestamp
+# It is most useful when using events
+# (see: event_config)
+# NOTE: This message will be published at exactly the same rate as the imu_raw_data_rate
+publish_internal_time_ref : True
+
 # ****************************************************************** 
 # GNSS Settings (only applicable for devices with GNSS) 
 # ****************************************************************** 

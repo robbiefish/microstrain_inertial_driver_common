@@ -36,6 +36,11 @@ bool MicrostrainPublishers::configure()
     {
       MICROSTRAIN_INFO(node_, "Publishing raw IMU data.");
       imu_pub_ = create_publisher<ImuMsg>(node_, "imu/data", 100);
+      if (config_->publish_internal_time_ref_)
+      {
+        MICROSTRAIN_INFO(node_, "Publishing internal time ref");
+        imu_time_pub_ = create_publisher<TimeReferenceMsg>(node_, "imu/internal_time_ref", 100);
+      }
     }
 
     // If the device has a magnetometer, publish relevant topics

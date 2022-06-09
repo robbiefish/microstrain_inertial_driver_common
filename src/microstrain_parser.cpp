@@ -177,6 +177,12 @@ void MicrostrainParser::parseIMUPacket(const mscl::MipDataPacket& packet)
   publishers_->imu_msg_.header.stamp = config_->use_ros_time_ ? ros_time_now(node_) : packet_time;
   publishers_->imu_msg_.header.frame_id = config_->imu_frame_id_;
 
+  // Internal time ref
+  publishers_->imu_time_msg_.header = publishers_->imu_msg_.header;
+  const bool has_reference_time = packet.shared().hasReferenceTime();
+  if (has_reference_time)
+    publishers_->imu_time_msg_.time_ref = to_ros_time(packet.shared().referenceTime());
+
   // Magnetometer timestamp
   publishers_->mag_msg_.header = publishers_->imu_msg_.header;
 
@@ -358,6 +364,9 @@ void MicrostrainParser::parseIMUPacket(const mscl::MipDataPacket& packet)
   // Publish
   if (publishers_->imu_pub_ != nullptr && (has_accel || has_gyro || has_quat))
     publishers_->imu_pub_->publish(publishers_->imu_msg_);
+
+  if (publishers_->imu_time_pub_ != nullptr && has_reference_time)
+    publishers_->imu_time_pub_->publish(publishers_->imu_time_msg_);
 
   if (publishers_->mag_pub_ != nullptr && has_mag)
     publishers_->mag_pub_->publish(publishers_->mag_msg_);
