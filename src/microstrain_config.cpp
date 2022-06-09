@@ -1355,7 +1355,7 @@ bool MicrostrainConfig::configureEvents(RosNodeType* node)
       }
 
       // Parse the yml values into values that can be understood my MSCL
-      const uint8_t trigger_gpio_pin = trigger_gpio_pin_entry.as<uint8_t>();
+      const uint8_t trigger_gpio_pin = trigger_gpio_pin_entry.as<uint16_t>();
       std::string trigger_gpio_mode = trigger_gpio_mode_entry.as<std::string>();
       std::transform(trigger_gpio_mode.begin(), trigger_gpio_mode.end(), trigger_gpio_mode.begin(), ::toupper);  // Capitalize the GPIO mode
       if (trigger_gpio_mode == EVENT_TRIGGER_GPIO_MODE_DISABLED)
@@ -1386,11 +1386,13 @@ bool MicrostrainConfig::configureEvents(RosNodeType* node)
     try
     {
       inertial_device_->setEventTriggerConfig(event_trigger_config);
+      MICROSTRAIN_INFO(node_, "Configured event trigger %d of type %s", event_trigger_config.instance, trigger_type.c_str());
     }
     catch (mscl::Error& e)
     {
-      MICROSTRAIN_ERROR(node_, "Unable to configure trigger %d of type %s", i, trigger_type.c_str());
-      continue;
+      MICROSTRAIN_ERROR(node_, "Unable to configure trigger %d of type %s", event_trigger_config.instance, trigger_type.c_str());
+      MICROSTRAIN_ERROR(node_, "Error: %s", e.what());
+      return false;
     }
 
     // Get the action configuration and use that to configure the device
@@ -1465,11 +1467,13 @@ bool MicrostrainConfig::configureEvents(RosNodeType* node)
     try
     {
       inertial_device_->setEventActionConfig(event_action_config);
+      MICROSTRAIN_INFO(node_, "Configured event action %d of type %s", event_action_config.instance, action_type.c_str());
     }
     catch (const mscl::Error& e)
     {
-      MICROSTRAIN_ERROR(node_, "Unable to configure action %d of type %s", i, action_type.c_str());
-      continue;
+      MICROSTRAIN_ERROR(node_, "Unable to configure action %d of type %s", event_action_config.instance, action_type.c_str());
+      MICROSTRAIN_ERROR(node_, "Error: %s", e.what());
+      return false;
     }
     
   }

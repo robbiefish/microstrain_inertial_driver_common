@@ -412,5 +412,5 @@ event_config : |  # Please note that this '|'' symbol MUST be here or ROS will a
       type: "MESSAGE"
       config:
         topic: "/cv7/timestamp"
-        message_type: imu_data
+        message_type: "timestamp"  # Note that this does nothing right now
         sample_rate: 0

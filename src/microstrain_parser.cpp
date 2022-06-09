@@ -162,7 +162,7 @@ void MicrostrainParser::parseIMUPacket(const mscl::MipDataPacket& packet)
     if (packet.shared().eventSource() == config_->time_reference_event_id_)
     {
       config_->time_reference_msg_.header.stamp = to_ros_time(packet.collectedTimestamp().nanoseconds());
-      config_->time_reference_msg_.time_ref = to_ros_time(packet.deviceTimestamp().nanoseconds());
+      config_->time_reference_msg_.time_ref = to_ros_time(packet.shared().referenceTime());
       config_->time_reference_msg_.source = "CV7";
       config_->time_reference_pub_->publish(config_->time_reference_msg_);
       return;
