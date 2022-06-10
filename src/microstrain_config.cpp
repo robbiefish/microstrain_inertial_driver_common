@@ -1449,9 +1449,10 @@ bool MicrostrainConfig::configureEvents(RosNodeType* node)
       // Parse the yml values into values that MSCL can understand
       // TODO(robbiefish): Right now we will just provide date messages, but we need to allow users to configure more about the action
       event_action_config.parameters.message.setChannelFields(mscl::MipTypes::DataClass::CLASS_AHRS_IMU, {
+        mscl::MipTypes::ChannelField::CH_FIELD_SENSOR_SHARED_EVENT_SOURCE,
         mscl::MipTypes::ChannelField::CH_FIELD_SENSOR_SHARED_REFERENCE_TIMESTAMP
       });
-      time_reference_event_id_ = i;
+      time_reference_event_id_ = i + 1;
       time_reference_pub_ = create_publisher<TimeReferenceMsg>(node_, topic_entry.as<std::string>(), 10);
 
       const size_t sample_rate = sample_rate_entry.as<size_t>();

@@ -157,7 +157,7 @@ void MicrostrainParser::parseIMUPacket(const mscl::MipDataPacket& packet)
 
   // Act diferently if this is an event
   // TODO(robbiefish): How do we implement this so it scales with multiple message types??
-  if (packet.shared().eventSource() != mscl::MipSharedDataFields::EVENT_SOURCE_NONE && packet.shared().eventSource() != mscl::MipSharedDataFields::EVENT_SOURCE_UNKNOWN)
+  if (packet.shared().hasEventSource())
   {
     if (packet.shared().eventSource() == config_->time_reference_event_id_)
     {
