@@ -118,11 +118,11 @@ void MicrostrainParser::parseAuxString(const std::string& aux_string)
     MICROSTRAIN_DEBUG(node_, "Found NMEA sentence %s", nmea_sentence.c_str());
 
     // Publish the NMEA sentence to ROS
-    publishers_->nmea_sentence_msg_.header.stamp = ros_time_now(node_);
-    publishers_->nmea_sentence_msg_.header.frame_id = config_->nmea_frame_id_;
-    publishers_->nmea_sentence_msg_.sentence = nmea_sentence;
+    nmea_sentence_msg_.header.stamp = ros_time_now(node_);
+    nmea_sentence_msg_.header.frame_id = config_->nmea_frame_id_;
+    nmea_sentence_msg_.sentence = nmea_sentence;
     if (publishers_->nmea_sentence_pub_ != nullptr)
-      publishers_->nmea_sentence_pub_->publish(publishers_->nmea_sentence_msg_);
+      publishers_->nmea_sentence_pub_->publish(nmea_sentence_msg_);
 
     // Remove everything from the beginning of the string to the end of the NMEA sentence as it should all be parsed now
     aux_string_.erase(0, nmea_end_index + 1);
@@ -173,21 +173,21 @@ void MicrostrainParser::parseIMUPacket(const mscl::MipDataPacket& packet)
   const RosTimeType packet_time = getPacketTimestamp(packet);
 
   // IMU timestamp
-  set_seq(&publishers_->imu_msg_.header, imu_valid_packet_count_);
-  publishers_->imu_msg_.header.stamp = config_->use_ros_time_ ? ros_time_now(node_) : packet_time;
-  publishers_->imu_msg_.header.frame_id = config_->imu_frame_id_;
+  set_seq(&imu_msg_.header, imu_valid_packet_count_);
+  imu_msg_.header.stamp = config_->use_ros_time_ ? ros_time_now(node_) : packet_time;
+  imu_msg_.header.frame_id = config_->imu_frame_id_;
 
   // Internal time ref
-  publishers_->imu_time_msg_.header = publishers_->imu_msg_.header;
+  imu_time_msg_.header = imu_msg_.header;
   const bool has_reference_time = packet.shared().hasReferenceTime();
   if (has_reference_time)
-    publishers_->imu_time_msg_.time_ref = to_ros_time(packet.shared().referenceTime());
+    imu_time_msg_.time_ref = to_ros_time(packet.shared().referenceTime());
 
   // Magnetometer timestamp
-  publishers_->mag_msg_.header = publishers_->imu_msg_.header;
+  mag_msg_.header = imu_msg_.header;
 
   // GPS correlation timestamp headder
-  publishers_->gps_corr_msg_.header = publishers_->imu_msg_.header;
+  gps_corr_msg_.header = imu_msg_.header;
 
   // Data present flags
   bool has_accel = false;
@@ -213,21 +213,21 @@ void MicrostrainParser::parseIMUPacket(const mscl::MipDataPacket& packet)
         // Stuff into ROS message - acceleration in m/s^2
         if (point.qualifier() == mscl::MipTypes::CH_X)
         {
-          publishers_->imu_msg_.linear_acceleration.x = USTRAIN_G * point.as_float();
+          imu_msg_.linear_acceleration.x = USTRAIN_G * point.as_float();
         }
         else if (point.qualifier() == mscl::MipTypes::CH_Y)
         {
-          publishers_->imu_msg_.linear_acceleration.y = USTRAIN_G * point.as_float();
+          imu_msg_.linear_acceleration.y = USTRAIN_G * point.as_float();
 
           if (config_->use_enu_frame_)
-            publishers_->imu_msg_.linear_acceleration.y *= -1.0;
+            imu_msg_.linear_acceleration.y *= -1.0;
         }
         else if (point.qualifier() == mscl::MipTypes::CH_Z)
         {
-          publishers_->imu_msg_.linear_acceleration.z = USTRAIN_G * point.as_float();
+          imu_msg_.linear_acceleration.z = USTRAIN_G * point.as_float();
 
           if (config_->use_enu_frame_)
-            publishers_->imu_msg_.linear_acceleration.z *= -1.0;
+            imu_msg_.linear_acceleration.z *= -1.0;
         }
       }
       break;
@@ -239,21 +239,21 @@ void MicrostrainParser::parseIMUPacket(const mscl::MipDataPacket& packet)
 
         if (point.qualifier() == mscl::MipTypes::CH_X)
         {
-          publishers_->imu_msg_.angular_velocity.x = point.as_float();
+          imu_msg_.angular_velocity.x = point.as_float();
         }
         else if (point.qualifier() == mscl::MipTypes::CH_Y)
         {
-          publishers_->imu_msg_.angular_velocity.y = point.as_float();
+          imu_msg_.angular_velocity.y = point.as_float();
 
           if (config_->use_enu_frame_)
-            publishers_->imu_msg_.angular_velocity.y *= -1.0;
+            imu_msg_.angular_velocity.y *= -1.0;
         }
         else if (point.qualifier() == mscl::MipTypes::CH_Z)
         {
-          publishers_->imu_msg_.angular_velocity.z = point.as_float();
+          imu_msg_.angular_velocity.z = point.as_float();
 
           if (config_->use_enu_frame_)
-            publishers_->imu_msg_.angular_velocity.z *= -1.0;
+            imu_msg_.angular_velocity.z *= -1.0;
         }
       }
       break;
@@ -266,7 +266,7 @@ void MicrostrainParser::parseIMUPacket(const mscl::MipDataPacket& packet)
         if (point.qualifier() == mscl::MipTypes::CH_X)
         {
           curr_imu_mag_x_ = point.as_float();
-          publishers_->mag_msg_.magnetic_field.x = curr_imu_mag_x_;
+          mag_msg_.magnetic_field.x = curr_imu_mag_x_;
         }
         else if (point.qualifier() == mscl::MipTypes::CH_Y)
         {
@@ -275,7 +275,7 @@ void MicrostrainParser::parseIMUPacket(const mscl::MipDataPacket& packet)
           if (config_->use_enu_frame_)
             curr_imu_mag_y_ *= -1.0;
 
-          publishers_->mag_msg_.magnetic_field.y = curr_imu_mag_y_;
+          mag_msg_.magnetic_field.y = curr_imu_mag_y_;
         }
         else if (point.qualifier() == mscl::MipTypes::CH_Z)
         {
@@ -284,7 +284,7 @@ void MicrostrainParser::parseIMUPacket(const mscl::MipDataPacket& packet)
           if (config_->use_enu_frame_)
             curr_imu_mag_z_ *= -1.0;
 
-          publishers_->mag_msg_.magnetic_field.z = curr_imu_mag_z_;
+          mag_msg_.magnetic_field.z = curr_imu_mag_z_;
         }
       }
       break;
@@ -310,14 +310,14 @@ void MicrostrainParser::parseIMUPacket(const mscl::MipDataPacket& packet)
 
             q_body2enu = q_ned2enu*qbody2ned*q_vehiclebody2sensorbody;
 
-            publishers_->imu_msg_.orientation = tf2::toMsg(q_body2enu);
+            imu_msg_.orientation = tf2::toMsg(q_body2enu);
           }
           else
           {
-            publishers_->imu_msg_.orientation.x = quaternion.as_floatAt(1);
-            publishers_->imu_msg_.orientation.y = quaternion.as_floatAt(2);
-            publishers_->imu_msg_.orientation.z = quaternion.as_floatAt(3);
-            publishers_->imu_msg_.orientation.w = quaternion.as_floatAt(0);
+            imu_msg_.orientation.x = quaternion.as_floatAt(1);
+            imu_msg_.orientation.y = quaternion.as_floatAt(2);
+            imu_msg_.orientation.z = quaternion.as_floatAt(3);
+            imu_msg_.orientation.w = quaternion.as_floatAt(0);
           }
         }
       }
@@ -330,11 +330,11 @@ void MicrostrainParser::parseIMUPacket(const mscl::MipDataPacket& packet)
         // point.qualifier() == mscl::MipTypes::CH_FLAGS always returned false so I used
         // an iterator and manually incremented it to access all the elements
         has_gps_corr = true;
-        publishers_->gps_corr_msg_.gps_cor.gps_tow = point_iter->as_double();
+        gps_corr_msg_.gps_cor.gps_tow = point_iter->as_double();
         point_iter++;
-        publishers_->gps_corr_msg_.gps_cor.gps_week_number = point_iter->as_uint16();
+        gps_corr_msg_.gps_cor.gps_week_number = point_iter->as_uint16();
         point_iter++;
-        publishers_->gps_corr_msg_.gps_cor.timestamp_flags = point_iter->as_uint16();
+        gps_corr_msg_.gps_cor.timestamp_flags = point_iter->as_uint16();
       }
       break;
     }
@@ -344,35 +344,35 @@ void MicrostrainParser::parseIMUPacket(const mscl::MipDataPacket& packet)
   {
     // Since the sensor does not produce a covariance for linear acceleration, set it based on our pulled in parameters.
     std::copy(config_->imu_linear_cov_.begin(), config_->imu_linear_cov_.end(),
-              publishers_->imu_msg_.linear_acceleration_covariance.begin());
+              imu_msg_.linear_acceleration_covariance.begin());
   }
 
   if (has_gyro)
   {
     // Since the sensor does not produce a covariance for angular velocity, set it based on our pulled in parameters.
     std::copy(config_->imu_angular_cov_.begin(), config_->imu_angular_cov_.end(),
-              publishers_->imu_msg_.angular_velocity_covariance.begin());
+              imu_msg_.angular_velocity_covariance.begin());
   }
 
   if (has_quat)
   {
     // Since the MIP_AHRS data does not contain uncertainty values we have to set them based on the parameter values.
     std::copy(config_->imu_orientation_cov_.begin(), config_->imu_orientation_cov_.end(),
-              publishers_->imu_msg_.orientation_covariance.begin());
+              imu_msg_.orientation_covariance.begin());
   }
 
   // Publish
   if (publishers_->imu_pub_ != nullptr && (has_accel || has_gyro || has_quat))
-    publishers_->imu_pub_->publish(publishers_->imu_msg_);
+    publishers_->imu_pub_->publish(imu_msg_);
 
   if (publishers_->imu_time_pub_ != nullptr && has_reference_time)
-    publishers_->imu_time_pub_->publish(publishers_->imu_time_msg_);
+    publishers_->imu_time_pub_->publish(imu_time_msg_);
 
   if (publishers_->mag_pub_ != nullptr && has_mag)
-    publishers_->mag_pub_->publish(publishers_->mag_msg_);
+    publishers_->mag_pub_->publish(mag_msg_);
 
   if (publishers_->gps_corr_pub_ != nullptr && has_gps_corr)
-    publishers_->gps_corr_pub_->publish(publishers_->gps_corr_msg_);
+    publishers_->gps_corr_pub_->publish(gps_corr_msg_);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -400,22 +400,22 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
   const RosTimeType packet_time = getPacketTimestamp(packet);
 
   // Filtered IMU timestamp and frame
-  set_seq(&publishers_->filtered_imu_msg_.header, filter_valid_packet_count_);
-  publishers_->filtered_imu_msg_.header.stamp = config_->use_ros_time_ ? ros_time_now(node_) : packet_time;
-  publishers_->filtered_imu_msg_.header.frame_id = config_->filter_frame_id_;
+  set_seq(&filtered_imu_msg_.header, filter_valid_packet_count_);
+  filtered_imu_msg_.header.stamp = config_->use_ros_time_ ? ros_time_now(node_) : packet_time;
+  filtered_imu_msg_.header.frame_id = config_->filter_frame_id_;
 
   // Nav odom timestamp and frame
-  set_seq(&publishers_->filter_msg_.header, filter_valid_packet_count_);
-  publishers_->filter_msg_.header.stamp = config_->use_ros_time_ ? ros_time_now(node_) : packet_time;
-  publishers_->filter_msg_.header.frame_id = config_->filter_frame_id_;
+  set_seq(&filter_msg_.header, filter_valid_packet_count_);
+  filter_msg_.header.stamp = config_->use_ros_time_ ? ros_time_now(node_) : packet_time;
+  filter_msg_.header.frame_id = config_->filter_frame_id_;
 
   // Nav relative position odom timestamp and frame (note: Relative position frame is NED for both pos and vel)
-  set_seq(&publishers_->filter_relative_pos_msg_.header, filter_valid_packet_count_);
-  publishers_->filter_relative_pos_msg_.header.stamp = config_->use_ros_time_ ? ros_time_now(node_) : packet_time;
-  publishers_->filter_relative_pos_msg_.header.frame_id = config_->filter_frame_id_;
-  publishers_->filter_relative_pos_msg_.child_frame_id = config_->filter_child_frame_id_;
-  publishers_->filter_transform_msg_.header = publishers_->filter_relative_pos_msg_.header;  // Same header for the transform
-  publishers_->filter_transform_msg_.child_frame_id = publishers_->filter_relative_pos_msg_.child_frame_id;
+  set_seq(&filter_relative_pos_msg_.header, filter_valid_packet_count_);
+  filter_relative_pos_msg_.header.stamp = config_->use_ros_time_ ? ros_time_now(node_) : packet_time;
+  filter_relative_pos_msg_.header.frame_id = config_->filter_frame_id_;
+  filter_relative_pos_msg_.child_frame_id = config_->filter_child_frame_id_;
+  filter_transform_msg_.header = filter_relative_pos_msg_.header;  // Same header for the transform
+  filter_transform_msg_.child_frame_id = filter_relative_pos_msg_.child_frame_id;
 
   // Get the list of data elements
   const mscl::MipDataPoints& points = packet.data();
@@ -430,15 +430,15 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
         filter_status_received = true;
         if (point.qualifier() == mscl::MipTypes::CH_FILTER_STATE)
         {
-          publishers_->filter_status_msg_.filter_state = point.as_uint16();
+          filter_status_msg_.filter_state = point.as_uint16();
         }
         else if (point.qualifier() == mscl::MipTypes::CH_DYNAMICS_MODE)
         {
-          publishers_->filter_status_msg_.dynamics_mode = point.as_uint16();
+          filter_status_msg_.dynamics_mode = point.as_uint16();
         }
         else if (point.qualifier() == mscl::MipTypes::CH_FLAGS)
         {
-          publishers_->filter_status_msg_.status_flags = point.as_uint16();
+          filter_status_msg_.status_flags = point.as_uint16();
         }
       }
       break;
@@ -447,7 +447,7 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
       case mscl::MipTypes::CH_FIELD_ESTFILTER_ESTIMATED_LLH_POS:
       {
         filter_odom_received = true;
-        publishers_->filter_msg_.child_frame_id = config_->filter_child_frame_id_;
+        filter_msg_.child_frame_id = config_->filter_child_frame_id_;
 
         if (point.qualifier() == mscl::MipTypes::CH_LATITUDE)
         {
@@ -455,11 +455,11 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
 
           if (config_->use_enu_frame_)
           {
-            publishers_->filter_msg_.pose.pose.position.y = curr_filter_pos_lat_;
+            filter_msg_.pose.pose.position.y = curr_filter_pos_lat_;
           }
           else
           {
-            publishers_->filter_msg_.pose.pose.position.x = curr_filter_pos_lat_;
+            filter_msg_.pose.pose.position.x = curr_filter_pos_lat_;
           }
         }
         else if (point.qualifier() == mscl::MipTypes::CH_LONGITUDE)
@@ -468,17 +468,17 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
 
           if (config_->use_enu_frame_)
           {
-            publishers_->filter_msg_.pose.pose.position.x = curr_filter_pos_long_;
+            filter_msg_.pose.pose.position.x = curr_filter_pos_long_;
           }
           else
           {
-            publishers_->filter_msg_.pose.pose.position.y = curr_filter_pos_long_;
+            filter_msg_.pose.pose.position.y = curr_filter_pos_long_;
           }
         }
         else if (point.qualifier() == mscl::MipTypes::CH_HEIGHT_ABOVE_ELLIPSOID)
         {
           curr_filter_pos_height_ = point.as_double();
-          publishers_->filter_msg_.pose.pose.position.z = curr_filter_pos_height_;
+          filter_msg_.pose.pose.position.z = curr_filter_pos_height_;
         }
       }
       break;
@@ -494,13 +494,13 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
 
           if (config_->use_enu_frame_)
           {
-            publishers_->filter_msg_.twist.twist.linear.y = curr_filter_vel_north_;
-            publishers_->filter_relative_pos_msg_.twist.twist.linear.y = curr_filter_vel_north_;
+            filter_msg_.twist.twist.linear.y = curr_filter_vel_north_;
+            filter_relative_pos_msg_.twist.twist.linear.y = curr_filter_vel_north_;
           }
           else
           {
-            publishers_->filter_msg_.twist.twist.linear.x = curr_filter_vel_north_;
-            publishers_->filter_relative_pos_msg_.twist.twist.linear.x = curr_filter_vel_north_;
+            filter_msg_.twist.twist.linear.x = curr_filter_vel_north_;
+            filter_relative_pos_msg_.twist.twist.linear.x = curr_filter_vel_north_;
           }
         }
         else if (point.qualifier() == mscl::MipTypes::CH_EAST)
@@ -509,13 +509,13 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
 
           if (config_->use_enu_frame_)
           {
-            publishers_->filter_msg_.twist.twist.linear.x = curr_filter_vel_east_;
-            publishers_->filter_relative_pos_msg_.twist.twist.linear.x = curr_filter_vel_east_;
+            filter_msg_.twist.twist.linear.x = curr_filter_vel_east_;
+            filter_relative_pos_msg_.twist.twist.linear.x = curr_filter_vel_east_;
           }
           else
           {
-            publishers_->filter_msg_.twist.twist.linear.y = curr_filter_vel_east_;
-            publishers_->filter_relative_pos_msg_.twist.twist.linear.y = curr_filter_vel_east_;
+            filter_msg_.twist.twist.linear.y = curr_filter_vel_east_;
+            filter_relative_pos_msg_.twist.twist.linear.y = curr_filter_vel_east_;
           }
         }
         else if (point.qualifier() == mscl::MipTypes::CH_DOWN)
@@ -524,13 +524,13 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
 
           if (config_->use_enu_frame_)
           {
-            publishers_->filter_msg_.twist.twist.linear.z = -curr_filter_vel_down_;
-            publishers_->filter_relative_pos_msg_.twist.twist.linear.z = -curr_filter_vel_down_;
+            filter_msg_.twist.twist.linear.z = -curr_filter_vel_down_;
+            filter_relative_pos_msg_.twist.twist.linear.z = -curr_filter_vel_down_;
           }
           else
           {
-            publishers_->filter_msg_.twist.twist.linear.z = curr_filter_vel_down_;
-            publishers_->filter_relative_pos_msg_.twist.twist.linear.z = curr_filter_vel_down_;
+            filter_msg_.twist.twist.linear.z = curr_filter_vel_down_;
+            filter_relative_pos_msg_.twist.twist.linear.z = curr_filter_vel_down_;
           }
         }
       }
@@ -566,12 +566,12 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
                 curr_filter_yaw_ += 2.0*M_PI;
           }
 
-          publishers_->filter_heading_msg_.heading_deg = curr_filter_yaw_ * 180.0 / M_PI;
-          publishers_->filter_heading_msg_.heading_rad = curr_filter_yaw_;
+          filter_heading_msg_.heading_deg = curr_filter_yaw_ * 180.0 / M_PI;
+          filter_heading_msg_.heading_rad = curr_filter_yaw_;
         }
         else if (point.qualifier() == mscl::MipTypes::CH_FLAGS)
         {
-          publishers_->filter_heading_msg_.status_flags = point.as_uint16();
+          filter_heading_msg_.status_flags = point.as_uint16();
         }
       }
       break;
@@ -596,21 +596,21 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
 
           q_body2enu = q_ned2enu*qbody2ned*q_vehiclebody2sensorbody;
 
-          publishers_->filter_msg_.pose.pose.orientation = tf2::toMsg(q_body2enu);
+          filter_msg_.pose.pose.orientation = tf2::toMsg(q_body2enu);
         }
         else
         {
-          publishers_->filter_msg_.pose.pose.orientation.x = quaternion.as_floatAt(1);
-          publishers_->filter_msg_.pose.pose.orientation.y = quaternion.as_floatAt(2);
-          publishers_->filter_msg_.pose.pose.orientation.z = quaternion.as_floatAt(3);
-          publishers_->filter_msg_.pose.pose.orientation.w = quaternion.as_floatAt(0);
+          filter_msg_.pose.pose.orientation.x = quaternion.as_floatAt(1);
+          filter_msg_.pose.pose.orientation.y = quaternion.as_floatAt(2);
+          filter_msg_.pose.pose.orientation.z = quaternion.as_floatAt(3);
+          filter_msg_.pose.pose.orientation.w = quaternion.as_floatAt(0);
         }
 
-        publishers_->filtered_imu_msg_.orientation = publishers_->filter_msg_.pose.pose.orientation;
-        publishers_->filter_relative_pos_msg_.pose.pose.orientation =
-            publishers_->filter_msg_.pose.pose.orientation;
-        publishers_->filter_transform_msg_.transform.rotation =
-            publishers_->filter_relative_pos_msg_.pose.pose.orientation;
+        filtered_imu_msg_.orientation = filter_msg_.pose.pose.orientation;
+        filter_relative_pos_msg_.pose.pose.orientation =
+            filter_msg_.pose.pose.orientation;
+        filter_transform_msg_.transform.rotation =
+            filter_relative_pos_msg_.pose.pose.orientation;
       }
       break;
 
@@ -623,9 +623,9 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
         {
           curr_filter_angular_rate_x_ = point.as_float();
 
-          publishers_->filter_msg_.twist.twist.angular.x = curr_filter_angular_rate_x_;
-          publishers_->filtered_imu_msg_.angular_velocity.x = curr_filter_angular_rate_x_;
-          publishers_->filter_relative_pos_msg_.twist.twist.angular.x = curr_filter_angular_rate_x_;
+          filter_msg_.twist.twist.angular.x = curr_filter_angular_rate_x_;
+          filtered_imu_msg_.angular_velocity.x = curr_filter_angular_rate_x_;
+          filter_relative_pos_msg_.twist.twist.angular.x = curr_filter_angular_rate_x_;
         }
         else if (point.qualifier() == mscl::MipTypes::CH_Y)
         {
@@ -634,9 +634,9 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
           if (config_->use_enu_frame_)
             curr_filter_angular_rate_y_ *= -1.0;
 
-          publishers_->filter_msg_.twist.twist.angular.y = curr_filter_angular_rate_y_;
-          publishers_->filtered_imu_msg_.angular_velocity.y = curr_filter_angular_rate_y_;
-          publishers_->filter_relative_pos_msg_.twist.twist.angular.y = curr_filter_angular_rate_y_;
+          filter_msg_.twist.twist.angular.y = curr_filter_angular_rate_y_;
+          filtered_imu_msg_.angular_velocity.y = curr_filter_angular_rate_y_;
+          filter_relative_pos_msg_.twist.twist.angular.y = curr_filter_angular_rate_y_;
         }
         else if (point.qualifier() == mscl::MipTypes::CH_Z)
         {
@@ -645,9 +645,9 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
           if (config_->use_enu_frame_)
             curr_filter_angular_rate_z_ *= -1.0;
 
-          publishers_->filter_msg_.twist.twist.angular.z = curr_filter_angular_rate_z_;
-          publishers_->filtered_imu_msg_.angular_velocity.z = curr_filter_angular_rate_z_;
-          publishers_->filter_relative_pos_msg_.twist.twist.angular.z = curr_filter_angular_rate_z_;
+          filter_msg_.twist.twist.angular.z = curr_filter_angular_rate_z_;
+          filtered_imu_msg_.angular_velocity.z = curr_filter_angular_rate_z_;
+          filter_relative_pos_msg_.twist.twist.angular.z = curr_filter_angular_rate_z_;
         }
       }
       break;
@@ -660,7 +660,7 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
         {
           float accel_x = point.as_float();
 
-          publishers_->filtered_imu_msg_.linear_acceleration.x = accel_x;
+          filtered_imu_msg_.linear_acceleration.x = accel_x;
         }
         else if (point.qualifier() == mscl::MipTypes::CH_Y)
         {
@@ -669,7 +669,7 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
           if (config_->use_enu_frame_)
             accel_y *= -1.0;
 
-          publishers_->filtered_imu_msg_.linear_acceleration.y = accel_y;
+          filtered_imu_msg_.linear_acceleration.y = accel_y;
         }
         else if (point.qualifier() == mscl::MipTypes::CH_Z)
         {
@@ -678,7 +678,7 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
           if (config_->use_enu_frame_)
             accel_z *= -1.0;
 
-          publishers_->filtered_imu_msg_.linear_acceleration.z = accel_z;
+          filtered_imu_msg_.linear_acceleration.z = accel_z;
         }
       }
       break;
@@ -693,13 +693,13 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
 
           if (config_->use_enu_frame_)
           {
-            publishers_->filter_msg_.pose.covariance[7] = pow(curr_filter_pos_uncert_north_, 2);
-            publishers_->filter_relative_pos_msg_.pose.covariance[7] = publishers_->filter_msg_.pose.covariance[7];
+            filter_msg_.pose.covariance[7] = pow(curr_filter_pos_uncert_north_, 2);
+            filter_relative_pos_msg_.pose.covariance[7] = filter_msg_.pose.covariance[7];
           }
           else
           {
-            publishers_->filter_msg_.pose.covariance[0] = pow(curr_filter_pos_uncert_north_, 2);
-            publishers_->filter_relative_pos_msg_.pose.covariance[0] = publishers_->filter_msg_.pose.covariance[0];
+            filter_msg_.pose.covariance[0] = pow(curr_filter_pos_uncert_north_, 2);
+            filter_relative_pos_msg_.pose.covariance[0] = filter_msg_.pose.covariance[0];
           }
         }
         else if (point.qualifier() == mscl::MipTypes::CH_EAST)
@@ -708,20 +708,20 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
 
           if (config_->use_enu_frame_)
           {
-            publishers_->filter_msg_.pose.covariance[0] = pow(curr_filter_pos_uncert_east_, 2);
-            publishers_->filter_relative_pos_msg_.pose.covariance[0] = publishers_->filter_msg_.pose.covariance[0];
+            filter_msg_.pose.covariance[0] = pow(curr_filter_pos_uncert_east_, 2);
+            filter_relative_pos_msg_.pose.covariance[0] = filter_msg_.pose.covariance[0];
           }
           else
           {
-            publishers_->filter_msg_.pose.covariance[7] = pow(curr_filter_pos_uncert_east_, 2);
-            publishers_->filter_relative_pos_msg_.pose.covariance[7] = publishers_->filter_msg_.pose.covariance[7];
+            filter_msg_.pose.covariance[7] = pow(curr_filter_pos_uncert_east_, 2);
+            filter_relative_pos_msg_.pose.covariance[7] = filter_msg_.pose.covariance[7];
           }
         }
         else if (point.qualifier() == mscl::MipTypes::CH_DOWN)
         {
           curr_filter_pos_uncert_down_ = point.as_float();
-          publishers_->filter_msg_.pose.covariance[14] = pow(curr_filter_pos_uncert_down_, 2);
-          publishers_->filter_relative_pos_msg_.pose.covariance[14] = publishers_->filter_msg_.pose.covariance[14];
+          filter_msg_.pose.covariance[14] = pow(curr_filter_pos_uncert_down_, 2);
+          filter_relative_pos_msg_.pose.covariance[14] = filter_msg_.pose.covariance[14];
         }
       }
       break;
@@ -736,15 +736,15 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
 
           if (config_->use_enu_frame_)
           {
-            publishers_->filter_msg_.twist.covariance[0] = pow(curr_filter_vel_uncert_north_, 2);
-            publishers_->filter_relative_pos_msg_.twist.covariance[0] =
-                publishers_->filter_msg_.twist.covariance[0];
+            filter_msg_.twist.covariance[0] = pow(curr_filter_vel_uncert_north_, 2);
+            filter_relative_pos_msg_.twist.covariance[0] =
+                filter_msg_.twist.covariance[0];
           }
           else
           {
-            publishers_->filter_msg_.twist.covariance[7] = pow(curr_filter_vel_uncert_north_, 2);
-            publishers_->filter_relative_pos_msg_.twist.covariance[7] =
-                publishers_->filter_msg_.twist.covariance[7];
+            filter_msg_.twist.covariance[7] = pow(curr_filter_vel_uncert_north_, 2);
+            filter_relative_pos_msg_.twist.covariance[7] =
+                filter_msg_.twist.covariance[7];
           }
         }
         else if (point.qualifier() == mscl::MipTypes::CH_EAST)
@@ -753,23 +753,23 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
 
           if (config_->use_enu_frame_)
           {
-            publishers_->filter_msg_.twist.covariance[7] = pow(curr_filter_vel_uncert_east_, 2);
-            publishers_->filter_relative_pos_msg_.twist.covariance[7] =
-                publishers_->filter_msg_.twist.covariance[7];
+            filter_msg_.twist.covariance[7] = pow(curr_filter_vel_uncert_east_, 2);
+            filter_relative_pos_msg_.twist.covariance[7] =
+                filter_msg_.twist.covariance[7];
           }
           else
           {
-            publishers_->filter_msg_.twist.covariance[0] = pow(curr_filter_vel_uncert_east_, 2);
-            publishers_->filter_relative_pos_msg_.twist.covariance[0] =
-                publishers_->filter_msg_.twist.covariance[0];
+            filter_msg_.twist.covariance[0] = pow(curr_filter_vel_uncert_east_, 2);
+            filter_relative_pos_msg_.twist.covariance[0] =
+                filter_msg_.twist.covariance[0];
           }
         }
         else if (point.qualifier() == mscl::MipTypes::CH_DOWN)
         {
           curr_filter_vel_uncert_down_ = point.as_float();
-          publishers_->filter_msg_.twist.covariance[14] = pow(curr_filter_vel_uncert_down_, 2);
-          publishers_->filter_relative_pos_msg_.twist.covariance[14] =
-              publishers_->filter_msg_.twist.covariance[14];
+          filter_msg_.twist.covariance[14] = pow(curr_filter_vel_uncert_down_, 2);
+          filter_relative_pos_msg_.twist.covariance[14] =
+              filter_msg_.twist.covariance[14];
         }
       }
       break;
@@ -782,23 +782,23 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
         if (point.qualifier() == mscl::MipTypes::CH_ROLL)
         {
           curr_filter_att_uncert_roll_ = point.as_float();
-          publishers_->filter_msg_.pose.covariance[21] = pow(curr_filter_att_uncert_roll_, 2);
-          publishers_->filtered_imu_msg_.orientation_covariance[0] = publishers_->filter_msg_.pose.covariance[21];
-          publishers_->filter_relative_pos_msg_.pose.covariance[21] = publishers_->filter_msg_.pose.covariance[21];
+          filter_msg_.pose.covariance[21] = pow(curr_filter_att_uncert_roll_, 2);
+          filtered_imu_msg_.orientation_covariance[0] = filter_msg_.pose.covariance[21];
+          filter_relative_pos_msg_.pose.covariance[21] = filter_msg_.pose.covariance[21];
         }
         else if (point.qualifier() == mscl::MipTypes::CH_PITCH)
         {
           curr_filter_att_uncert_pitch_ = point.as_float();
-          publishers_->filter_msg_.pose.covariance[28] = pow(curr_filter_att_uncert_pitch_, 2);
-          publishers_->filtered_imu_msg_.orientation_covariance[4] = publishers_->filter_msg_.pose.covariance[28];
-          publishers_->filter_relative_pos_msg_.pose.covariance[28] = publishers_->filter_msg_.pose.covariance[28];
+          filter_msg_.pose.covariance[28] = pow(curr_filter_att_uncert_pitch_, 2);
+          filtered_imu_msg_.orientation_covariance[4] = filter_msg_.pose.covariance[28];
+          filter_relative_pos_msg_.pose.covariance[28] = filter_msg_.pose.covariance[28];
         }
         else if (point.qualifier() == mscl::MipTypes::CH_YAW)
         {
           curr_filter_att_uncert_yaw_ = point.as_float();
-          publishers_->filter_msg_.pose.covariance[35] = pow(curr_filter_att_uncert_yaw_, 2);
-          publishers_->filtered_imu_msg_.orientation_covariance[8] = publishers_->filter_msg_.pose.covariance[35];
-          publishers_->filter_relative_pos_msg_.pose.covariance[35] = publishers_->filter_msg_.pose.covariance[35];
+          filter_msg_.pose.covariance[35] = pow(curr_filter_att_uncert_yaw_, 2);
+          filtered_imu_msg_.orientation_covariance[8] = filter_msg_.pose.covariance[35];
+          filter_relative_pos_msg_.pose.covariance[35] = filter_msg_.pose.covariance[35];
         }
       }
       break;
@@ -808,19 +808,19 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
         filter_heading_state_received = true;
         if (point.qualifier() == mscl::MipTypes::CH_HEADING)
         {
-          publishers_->filter_heading_state_msg_.heading_rad = point.as_float();
+          filter_heading_state_msg_.heading_rad = point.as_float();
         }
         else if (point.qualifier() == mscl::MipTypes::CH_HEADING_UNCERTAINTY)
         {
-          publishers_->filter_heading_state_msg_.heading_uncertainty = point.as_float();
+          filter_heading_state_msg_.heading_uncertainty = point.as_float();
         }
         else if (point.qualifier() == mscl::MipTypes::CH_SOURCE)
         {
-          publishers_->filter_heading_state_msg_.source = point.as_uint16();
+          filter_heading_state_msg_.source = point.as_uint16();
         }
         else if (point.qualifier() == mscl::MipTypes::CH_FLAGS)
         {
-          publishers_->filter_heading_state_msg_.status_flags = point.as_uint16();
+          filter_heading_state_msg_.status_flags = point.as_uint16();
         }
       }
       break;
@@ -835,13 +835,13 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
 
           if (config_->use_enu_frame_)
           {
-            publishers_->filter_relative_pos_msg_.pose.pose.position.y = rel_pos_north;
-            publishers_->filter_transform_msg_.transform.translation.y = rel_pos_north;
+            filter_relative_pos_msg_.pose.pose.position.y = rel_pos_north;
+            filter_transform_msg_.transform.translation.y = rel_pos_north;
           }
           else
           {
-            publishers_->filter_relative_pos_msg_.pose.pose.position.x = rel_pos_north;
-            publishers_->filter_transform_msg_.transform.translation.x = rel_pos_north;
+            filter_relative_pos_msg_.pose.pose.position.x = rel_pos_north;
+            filter_transform_msg_.transform.translation.x = rel_pos_north;
           }
         }
         else if (point.qualifier() == mscl::MipTypes::CH_Y)
@@ -850,13 +850,13 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
 
           if (config_->use_enu_frame_)
           {
-            publishers_->filter_relative_pos_msg_.pose.pose.position.x = rel_pos_east;
-            publishers_->filter_transform_msg_.transform.translation.x = rel_pos_east;
+            filter_relative_pos_msg_.pose.pose.position.x = rel_pos_east;
+            filter_transform_msg_.transform.translation.x = rel_pos_east;
           }
           else
           {
-            publishers_->filter_relative_pos_msg_.pose.pose.position.y = rel_pos_east;
-            publishers_->filter_transform_msg_.transform.translation.y = rel_pos_east;
+            filter_relative_pos_msg_.pose.pose.position.y = rel_pos_east;
+            filter_transform_msg_.transform.translation.y = rel_pos_east;
           }
         }
         else if (point.qualifier() == mscl::MipTypes::CH_Z)
@@ -865,13 +865,13 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
 
           if (config_->use_enu_frame_)
           {
-            publishers_->filter_relative_pos_msg_.pose.pose.position.z = -rel_pos_down;
-            publishers_->filter_transform_msg_.transform.translation.z = -rel_pos_down;
+            filter_relative_pos_msg_.pose.pose.position.z = -rel_pos_down;
+            filter_transform_msg_.transform.translation.z = -rel_pos_down;
           }
           else
           {
-            publishers_->filter_relative_pos_msg_.pose.pose.position.z = rel_pos_down;
-            publishers_->filter_transform_msg_.transform.translation.z = rel_pos_down;
+            filter_relative_pos_msg_.pose.pose.position.z = rel_pos_down;
+            filter_transform_msg_.transform.translation.z = rel_pos_down;
           }
         }
       }
@@ -888,28 +888,28 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
           }
           else if (point.qualifier() == mscl::MipTypes::CH_TIME_OF_WEEK)
           {
-            publishers_->gnss_aiding_status_msg_[gnss_id].gps_tow = point.as_double();
+            gnss_aiding_status_msg_[gnss_id].gps_tow = point.as_double();
             gnss_aiding_status_received[gnss_id] = true;
           }
           else if (point.qualifier() == mscl::MipTypes::CH_STATUS)
           {
             uint16_t status_flags = point.as_uint16();
 
-            publishers_->gnss_aiding_status_msg_[gnss_id].has_position_fix =
+            gnss_aiding_status_msg_[gnss_id].has_position_fix =
                 (status_flags & mscl::InertialTypes::GnssAidingStatus::GNSS_AIDING_NO_FIX) == 0;
-            publishers_->gnss_aiding_status_msg_[gnss_id].tight_coupling =
+            gnss_aiding_status_msg_[gnss_id].tight_coupling =
                 status_flags & mscl::InertialTypes::GnssAidingStatus::GNSS_AIDING_TIGHT_COUPLING;
-            publishers_->gnss_aiding_status_msg_[gnss_id].differential_corrections =
+            gnss_aiding_status_msg_[gnss_id].differential_corrections =
                 status_flags & mscl::InertialTypes::GnssAidingStatus::GNSS_AIDING_DIFFERENTIAL;
-            publishers_->gnss_aiding_status_msg_[gnss_id].integer_fix =
+            gnss_aiding_status_msg_[gnss_id].integer_fix =
                 status_flags & mscl::InertialTypes::GnssAidingStatus::GNSS_AIDING_INTEGER_FIX;
-            publishers_->gnss_aiding_status_msg_[gnss_id].using_gps =
+            gnss_aiding_status_msg_[gnss_id].using_gps =
                 status_flags & mscl::InertialTypes::GnssAidingStatus::GNSS_AIDING_GPS;
-            publishers_->gnss_aiding_status_msg_[gnss_id].using_glonass =
+            gnss_aiding_status_msg_[gnss_id].using_glonass =
                 status_flags & mscl::InertialTypes::GnssAidingStatus::GNSS_AIDING_GLONASS;
-            publishers_->gnss_aiding_status_msg_[gnss_id].using_galileo =
+            gnss_aiding_status_msg_[gnss_id].using_galileo =
                 status_flags & mscl::InertialTypes::GnssAidingStatus::GNSS_AIDING_GALILEO;
-            publishers_->gnss_aiding_status_msg_[gnss_id].using_beidou =
+            gnss_aiding_status_msg_[gnss_id].using_beidou =
                 status_flags & mscl::InertialTypes::GnssAidingStatus::GNSS_AIDING_BEIDOU;
           }
           else
@@ -925,29 +925,29 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
         gnss_dual_antenna_status_received = true;
         if (point.qualifier() == mscl::MipTypes::CH_TIME_OF_WEEK)
         {
-          publishers_->gnss_dual_antenna_status_msg_.gps_tow = point.as_float();
+          gnss_dual_antenna_status_msg_.gps_tow = point.as_float();
         }
         else if (point.qualifier() == mscl::MipTypes::CH_HEADING)
         {
-          publishers_->gnss_dual_antenna_status_msg_.heading = point.as_float();
+          gnss_dual_antenna_status_msg_.heading = point.as_float();
         }
         else if (point.qualifier() == mscl::MipTypes::CH_HEADING_UNCERTAINTY)
         {
-          publishers_->gnss_dual_antenna_status_msg_.heading_uncertainty = point.as_float();
+          gnss_dual_antenna_status_msg_.heading_uncertainty = point.as_float();
         }
         else if (point.qualifier() == mscl::MipTypes::CH_FIX_TYPE)
         {
-          publishers_->gnss_dual_antenna_status_msg_.fix_type = point.as_uint8();
+          gnss_dual_antenna_status_msg_.fix_type = point.as_uint8();
         }
         else if (point.qualifier() == mscl::MipTypes::CH_STATUS)
         {
           uint16_t status_flags = point.as_uint16();
 
-          publishers_->gnss_dual_antenna_status_msg_.rcv_1_valid =
+          gnss_dual_antenna_status_msg_.rcv_1_valid =
               status_flags & mscl::InertialTypes::DualAntennaStatusFlags::DATA_VALID_REC_1;
-          publishers_->gnss_dual_antenna_status_msg_.rcv_2_valid =
+          gnss_dual_antenna_status_msg_.rcv_2_valid =
               status_flags & mscl::InertialTypes::DualAntennaStatusFlags::DATA_VALID_REC_2;
-          publishers_->gnss_dual_antenna_status_msg_.antenna_offsets_valid =
+          gnss_dual_antenna_status_msg_.antenna_offsets_valid =
               status_flags & mscl::InertialTypes::DualAntennaStatusFlags::ANTENNA_OFFSETS_VALID;
         }
       }
@@ -958,7 +958,7 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
         filter_aiding_measurement_summary_received = true;
         if (point.qualifier() == mscl::MipTypes::CH_TIME_OF_WEEK)
         {
-          publishers_->filter_aiding_measurement_summary_msg_.gps_tow = point.as_float();
+          filter_aiding_measurement_summary_msg_.gps_tow = point.as_float();
         }
         if (point.hasAddlIdentifiers())
         {
@@ -981,24 +981,24 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
           {
             case mscl::MipChannelIdentifier::AidingMeasurementTypes::GNSS:
               if (source == GNSS1_ID)
-                indicator = &(publishers_->filter_aiding_measurement_summary_msg_.gnss1);
+                indicator = &(filter_aiding_measurement_summary_msg_.gnss1);
               else if (source == GNSS2_ID)
-                indicator = &(publishers_->filter_aiding_measurement_summary_msg_.gnss2);
+                indicator = &(filter_aiding_measurement_summary_msg_.gnss2);
               break;
             case mscl::MipChannelIdentifier::AidingMeasurementTypes::DUAL_ANTENNA:
-              indicator = &(publishers_->filter_aiding_measurement_summary_msg_.dual_antenna);
+              indicator = &(filter_aiding_measurement_summary_msg_.dual_antenna);
               break;
             case mscl::MipChannelIdentifier::AidingMeasurementTypes::HEADING:
-              indicator = &(publishers_->filter_aiding_measurement_summary_msg_.heading);
+              indicator = &(filter_aiding_measurement_summary_msg_.heading);
               break;
             case mscl::MipChannelIdentifier::AidingMeasurementTypes::PRESSURE:
-              indicator = &(publishers_->filter_aiding_measurement_summary_msg_.pressure);
+              indicator = &(filter_aiding_measurement_summary_msg_.pressure);
               break;
             case mscl::MipChannelIdentifier::AidingMeasurementTypes::MAGNETOMETER:
-              indicator = &(publishers_->filter_aiding_measurement_summary_msg_.magnetometer);
+              indicator = &(filter_aiding_measurement_summary_msg_.magnetometer);
               break;
             case mscl::MipChannelIdentifier::AidingMeasurementTypes::SPEED:
-              indicator = &(publishers_->filter_aiding_measurement_summary_msg_.speed);
+              indicator = &(filter_aiding_measurement_summary_msg_.speed);
               break;
             default:
               continue;
@@ -1024,9 +1024,9 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
 
   // Copy fixed covariances to the filtered IMU message
   std::copy(config_->imu_linear_cov_.begin(), config_->imu_linear_cov_.end(),
-            publishers_->filtered_imu_msg_.linear_acceleration_covariance.begin());
+            filtered_imu_msg_.linear_acceleration_covariance.begin());
   std::copy(config_->imu_angular_cov_.begin(), config_->imu_angular_cov_.end(),
-            publishers_->filtered_imu_msg_.angular_velocity_covariance.begin());
+            filtered_imu_msg_.angular_velocity_covariance.begin());
 
   // Optionally transform the velocity into the vehicle frame
   if (config_->filter_vel_in_vehicle_frame_)
@@ -1040,48 +1040,48 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
     const tf2::Vector3 tf_rotated_vel = tf2::quatRotate(quaternion.inverse(), tf_curr_vel);
 
     // Set the rotated velocity to the filter messages
-    publishers_->filter_msg_.twist.twist.linear.x = tf_rotated_vel.getX();
-    publishers_->filter_msg_.twist.twist.linear.y = tf_rotated_vel.getY();
-    publishers_->filter_msg_.twist.twist.linear.z = tf_rotated_vel.getZ();
+    filter_msg_.twist.twist.linear.x = tf_rotated_vel.getX();
+    filter_msg_.twist.twist.linear.y = tf_rotated_vel.getY();
+    filter_msg_.twist.twist.linear.z = tf_rotated_vel.getZ();
 
-    publishers_->filter_relative_pos_msg_.twist.twist.linear.x = tf_rotated_vel.getX();
-    publishers_->filter_relative_pos_msg_.twist.twist.linear.y = tf_rotated_vel.getY();
-    publishers_->filter_relative_pos_msg_.twist.twist.linear.z = tf_rotated_vel.getZ();
+    filter_relative_pos_msg_.twist.twist.linear.x = tf_rotated_vel.getX();
+    filter_relative_pos_msg_.twist.twist.linear.y = tf_rotated_vel.getY();
+    filter_relative_pos_msg_.twist.twist.linear.z = tf_rotated_vel.getZ();
   }
 
   // Publish
   if (publishers_->filter_status_pub_ != nullptr && filter_status_received)
-    publishers_->filter_status_pub_->publish(publishers_->filter_status_msg_);
+    publishers_->filter_status_pub_->publish(filter_status_msg_);
 
   if (publishers_->filter_heading_pub_ != nullptr && filter_heading_received)
-    publishers_->filter_heading_pub_->publish(publishers_->filter_heading_msg_);
+    publishers_->filter_heading_pub_->publish(filter_heading_msg_);
 
   if (publishers_->filter_heading_state_pub_ != nullptr && filter_heading_state_received)
-    publishers_->filter_heading_state_pub_->publish(publishers_->filter_heading_state_msg_);
+    publishers_->filter_heading_state_pub_->publish(filter_heading_state_msg_);
 
   if (publishers_->filter_pub_ != nullptr && filter_odom_received)
-    publishers_->filter_pub_->publish(publishers_->filter_msg_);
+    publishers_->filter_pub_->publish(filter_msg_);
 
   if (publishers_->filtered_imu_pub_ != nullptr && filter_imu_received)
-    publishers_->filtered_imu_pub_->publish(publishers_->filtered_imu_msg_);
+    publishers_->filtered_imu_pub_->publish(filtered_imu_msg_);
 
   if (publishers_->filter_relative_pos_pub_ != nullptr && filter_relative_odom_received)
-    publishers_->filter_relative_pos_pub_->publish(publishers_->filter_relative_pos_msg_);
+    publishers_->filter_relative_pos_pub_->publish(filter_relative_pos_msg_);
 
   if (publishers_->transform_broadcaster_ != nullptr && relative_transform_received)
-    publishers_->transform_broadcaster_->sendTransform(publishers_->filter_transform_msg_);
+    publishers_->transform_broadcaster_->sendTransform(filter_transform_msg_);
 
   for (int i = 0; i < NUM_GNSS; i++)
   {
     if (publishers_->gnss_aiding_status_pub_[i] != nullptr && gnss_aiding_status_received[i])
-      publishers_->gnss_aiding_status_pub_[i]->publish(publishers_->gnss_aiding_status_msg_[i]);
+      publishers_->gnss_aiding_status_pub_[i]->publish(gnss_aiding_status_msg_[i]);
   }
 
   if (publishers_->gnss_dual_antenna_status_pub_ != nullptr && gnss_dual_antenna_status_received)
-    publishers_->gnss_dual_antenna_status_pub_->publish(publishers_->gnss_dual_antenna_status_msg_);
+    publishers_->gnss_dual_antenna_status_pub_->publish(gnss_dual_antenna_status_msg_);
 
   if (publishers_->filter_aiding_measurement_summary_pub_ != nullptr && filter_aiding_measurement_summary_received)
-    publishers_->filter_aiding_measurement_summary_pub_->publish(publishers_->filter_aiding_measurement_summary_msg_);
+    publishers_->filter_aiding_measurement_summary_pub_->publish(filter_aiding_measurement_summary_msg_);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1102,21 +1102,21 @@ void MicrostrainParser::parseGNSSPacket(const mscl::MipDataPacket& packet, int g
   const RosTimeType packet_time = getPacketTimestamp(packet);
 
   // GPS Fix time
-  set_seq(&publishers_->gnss_msg_[gnss_id].header, gnss_valid_packet_count_[gnss_id]);
-  publishers_->gnss_msg_[gnss_id].header.stamp = config_->use_ros_time_ ? ros_time_now(node_) : packet_time;
-  publishers_->gnss_msg_[gnss_id].header.frame_id = config_->gnss_frame_id_[gnss_id];
+  set_seq(&gnss_msg_[gnss_id].header, gnss_valid_packet_count_[gnss_id]);
+  gnss_msg_[gnss_id].header.stamp = config_->use_ros_time_ ? ros_time_now(node_) : packet_time;
+  gnss_msg_[gnss_id].header.frame_id = config_->gnss_frame_id_[gnss_id];
 
   // GPS Odom time
-  set_seq(&publishers_->gnss_odom_msg_[gnss_id].header, gnss_valid_packet_count_[gnss_id]);
-  publishers_->gnss_odom_msg_[gnss_id].header.stamp = config_->use_ros_time_ ? ros_time_now(node_) : packet_time;
-  publishers_->gnss_odom_msg_[gnss_id].header.frame_id = config_->gnss_frame_id_[gnss_id];
-  // publishers_->gnss_odom_msg_[gnss_id].child_frame_id  = config_->gnss_odom_child_frame_id_[gnss_id];
+  set_seq(&gnss_odom_msg_[gnss_id].header, gnss_valid_packet_count_[gnss_id]);
+  gnss_odom_msg_[gnss_id].header.stamp = config_->use_ros_time_ ? ros_time_now(node_) : packet_time;
+  gnss_odom_msg_[gnss_id].header.frame_id = config_->gnss_frame_id_[gnss_id];
+  // gnss_odom_msg_[gnss_id].child_frame_id  = config_->gnss_odom_child_frame_id_[gnss_id];
 
   // GPS Time reference
-  set_seq(&publishers_->gnss_time_msg_[gnss_id].header, gnss_valid_packet_count_[gnss_id]);
-  publishers_->gnss_time_msg_[gnss_id].header.stamp = ros_time_now(node_);
-  publishers_->gnss_time_msg_[gnss_id].header.frame_id = config_->gnss_frame_id_[gnss_id];
-  publishers_->gnss_time_msg_[gnss_id].time_ref = packet_time;
+  set_seq(&gnss_time_msg_[gnss_id].header, gnss_valid_packet_count_[gnss_id]);
+  gnss_time_msg_[gnss_id].header.stamp = ros_time_now(node_);
+  gnss_time_msg_[gnss_id].header.frame_id = config_->gnss_frame_id_[gnss_id];
+  gnss_time_msg_[gnss_id].time_ref = packet_time;
 
   // Data present flags
   bool has_nav_sat_fix = false;
@@ -1141,47 +1141,47 @@ void MicrostrainParser::parseGNSSPacket(const mscl::MipDataPacket& packet, int g
 
         if (point.qualifier() == mscl::MipTypes::CH_LATITUDE)
         {
-          publishers_->gnss_msg_[gnss_id].latitude = point.as_double();
+          gnss_msg_[gnss_id].latitude = point.as_double();
 
           if (config_->use_enu_frame_)
-            publishers_->gnss_odom_msg_[gnss_id].pose.pose.position.y = publishers_->gnss_msg_[gnss_id].latitude;
+            gnss_odom_msg_[gnss_id].pose.pose.position.y = gnss_msg_[gnss_id].latitude;
           else
-            publishers_->gnss_odom_msg_[gnss_id].pose.pose.position.x = publishers_->gnss_msg_[gnss_id].latitude;
+            gnss_odom_msg_[gnss_id].pose.pose.position.x = gnss_msg_[gnss_id].latitude;
         }
         else if (point.qualifier() == mscl::MipTypes::CH_LONGITUDE)
         {
-          publishers_->gnss_msg_[gnss_id].longitude = point.as_double();
+          gnss_msg_[gnss_id].longitude = point.as_double();
 
           if (config_->use_enu_frame_)
-            publishers_->gnss_odom_msg_[gnss_id].pose.pose.position.x = publishers_->gnss_msg_[gnss_id].longitude;
+            gnss_odom_msg_[gnss_id].pose.pose.position.x = gnss_msg_[gnss_id].longitude;
           else
-            publishers_->gnss_odom_msg_[gnss_id].pose.pose.position.y = publishers_->gnss_msg_[gnss_id].longitude;
+            gnss_odom_msg_[gnss_id].pose.pose.position.y = gnss_msg_[gnss_id].longitude;
         }
         else if (point.qualifier() == mscl::MipTypes::CH_HEIGHT_ABOVE_ELLIPSOID)
         {
-          publishers_->gnss_msg_[gnss_id].altitude = point.as_double();
-          publishers_->gnss_odom_msg_[gnss_id].pose.pose.position.z = publishers_->gnss_msg_[gnss_id].altitude;
+          gnss_msg_[gnss_id].altitude = point.as_double();
+          gnss_odom_msg_[gnss_id].pose.pose.position.z = gnss_msg_[gnss_id].altitude;
         }
         else if (point.qualifier() == mscl::MipTypes::CH_HORIZONTAL_ACCURACY)
         {
           // Horizontal covariance maps to lat and lon
-          publishers_->gnss_msg_[gnss_id].position_covariance[0] = pow(point.as_float(), 2);
-          publishers_->gnss_msg_[gnss_id].position_covariance[4] =
-              publishers_->gnss_msg_[gnss_id].position_covariance[0];
-          publishers_->gnss_odom_msg_[gnss_id].pose.covariance[0] =
-              publishers_->gnss_msg_[gnss_id].position_covariance[0];
-          publishers_->gnss_odom_msg_[gnss_id].pose.covariance[7] =
-              publishers_->gnss_msg_[gnss_id].position_covariance[0];
+          gnss_msg_[gnss_id].position_covariance[0] = pow(point.as_float(), 2);
+          gnss_msg_[gnss_id].position_covariance[4] =
+              gnss_msg_[gnss_id].position_covariance[0];
+          gnss_odom_msg_[gnss_id].pose.covariance[0] =
+              gnss_msg_[gnss_id].position_covariance[0];
+          gnss_odom_msg_[gnss_id].pose.covariance[7] =
+              gnss_msg_[gnss_id].position_covariance[0];
         }
         else if (point.qualifier() == mscl::MipTypes::CH_VERTICAL_ACCURACY)
         {
-          publishers_->gnss_msg_[gnss_id].position_covariance[8] = pow(point.as_float(), 2);
-          publishers_->gnss_odom_msg_[gnss_id].pose.covariance[14] =
-              publishers_->gnss_msg_[gnss_id].position_covariance[8];
+          gnss_msg_[gnss_id].position_covariance[8] = pow(point.as_float(), 2);
+          gnss_odom_msg_[gnss_id].pose.covariance[14] =
+              gnss_msg_[gnss_id].position_covariance[8];
         }
 
-        publishers_->gnss_msg_[gnss_id].status.service = 1;
-        publishers_->gnss_msg_[gnss_id].position_covariance_type = 2;
+        gnss_msg_[gnss_id].status.service = 1;
+        gnss_msg_[gnss_id].position_covariance_type = 2;
       }
       break;
 
@@ -1196,34 +1196,34 @@ void MicrostrainParser::parseGNSSPacket(const mscl::MipDataPacket& packet, int g
           float north_velocity = point.as_float();
 
           if (config_->use_enu_frame_)
-            publishers_->gnss_odom_msg_[gnss_id].twist.twist.linear.y = north_velocity;
+            gnss_odom_msg_[gnss_id].twist.twist.linear.y = north_velocity;
           else
-            publishers_->gnss_odom_msg_[gnss_id].twist.twist.linear.x = north_velocity;
+            gnss_odom_msg_[gnss_id].twist.twist.linear.x = north_velocity;
         }
         else if (point.qualifier() == mscl::MipTypes::CH_EAST)
         {
           float east_velocity = point.as_float();
 
           if (config_->use_enu_frame_)
-            publishers_->gnss_odom_msg_[gnss_id].twist.twist.linear.x = east_velocity;
+            gnss_odom_msg_[gnss_id].twist.twist.linear.x = east_velocity;
           else
-            publishers_->gnss_odom_msg_[gnss_id].twist.twist.linear.y = east_velocity;
+            gnss_odom_msg_[gnss_id].twist.twist.linear.y = east_velocity;
         }
         else if (point.qualifier() == mscl::MipTypes::CH_DOWN)
         {
           float down_velocity = point.as_float();
 
           if (config_->use_enu_frame_)
-            publishers_->gnss_odom_msg_[gnss_id].twist.twist.linear.z = -down_velocity;
+            gnss_odom_msg_[gnss_id].twist.twist.linear.z = -down_velocity;
           else
-            publishers_->gnss_odom_msg_[gnss_id].twist.twist.linear.z = down_velocity;
+            gnss_odom_msg_[gnss_id].twist.twist.linear.z = down_velocity;
         }
         else if (point.qualifier() == mscl::MipTypes::CH_SPEED_ACCURACY)
         {
           float speed_cov = pow(point.as_float(), 2);
-          publishers_->gnss_odom_msg_[gnss_id].twist.covariance[0] = speed_cov;
-          publishers_->gnss_odom_msg_[gnss_id].twist.covariance[7] = speed_cov;
-          publishers_->gnss_odom_msg_[gnss_id].twist.covariance[14] = speed_cov;
+          gnss_odom_msg_[gnss_id].twist.covariance[0] = speed_cov;
+          gnss_odom_msg_[gnss_id].twist.covariance[7] = speed_cov;
+          gnss_odom_msg_[gnss_id].twist.covariance[14] = speed_cov;
         }
       }
       break;
@@ -1235,16 +1235,16 @@ void MicrostrainParser::parseGNSSPacket(const mscl::MipDataPacket& packet, int g
 
         if (point.qualifier() == mscl::MipTypes::CH_FIX_TYPE)
         {
-          publishers_->gnss_fix_info_msg_[gnss_id].fix_type = point.as_uint8();
+          gnss_fix_info_msg_[gnss_id].fix_type = point.as_uint8();
         }
         else if (point.qualifier() == mscl::MipTypes::CH_SV_COUNT)
         {
-          publishers_->gnss_fix_info_msg_[gnss_id].num_sv = point.as_uint8();
+          gnss_fix_info_msg_[gnss_id].num_sv = point.as_uint8();
         }
         else if (point.qualifier() == mscl::MipTypes::CH_FLAGS)
         {
-          publishers_->gnss_fix_info_msg_[gnss_id].sbas_used = point.as_uint16() & mscl::InertialTypes::GnssFixFlags::FIX_SBAS_CORRECTIONS;
-          publishers_->gnss_fix_info_msg_[gnss_id].dngss_used = point.as_uint16() & mscl::InertialTypes::GnssFixFlags::FIX_DGNSS_CORRECTIONS;
+          gnss_fix_info_msg_[gnss_id].sbas_used = point.as_uint16() & mscl::InertialTypes::GnssFixFlags::FIX_SBAS_CORRECTIONS;
+          gnss_fix_info_msg_[gnss_id].dngss_used = point.as_uint16() & mscl::InertialTypes::GnssFixFlags::FIX_DGNSS_CORRECTIONS;
         }
       }
       break;
@@ -1253,16 +1253,16 @@ void MicrostrainParser::parseGNSSPacket(const mscl::MipDataPacket& packet, int g
 
   // Publish
   if (publishers_->gnss_pub_[gnss_id] != nullptr && has_nav_sat_fix)
-    publishers_->gnss_pub_[gnss_id]->publish(publishers_->gnss_msg_[gnss_id]);
+    publishers_->gnss_pub_[gnss_id]->publish(gnss_msg_[gnss_id]);
 
   if (publishers_->gnss_odom_pub_[gnss_id] != nullptr && has_odom)
-    publishers_->gnss_odom_pub_[gnss_id]->publish(publishers_->gnss_odom_msg_[gnss_id]);
+    publishers_->gnss_odom_pub_[gnss_id]->publish(gnss_odom_msg_[gnss_id]);
 
   if (publishers_->gnss_time_pub_[gnss_id] != nullptr && time_valid)
-    publishers_->gnss_time_pub_[gnss_id]->publish(publishers_->gnss_time_msg_[gnss_id]);
+    publishers_->gnss_time_pub_[gnss_id]->publish(gnss_time_msg_[gnss_id]);
 
   if (publishers_->gnss_fix_info_pub_[gnss_id] != nullptr && has_fix_info)
-    publishers_->gnss_fix_info_pub_[gnss_id]->publish(publishers_->gnss_fix_info_msg_[gnss_id]);
+    publishers_->gnss_fix_info_pub_[gnss_id]->publish(gnss_fix_info_msg_[gnss_id]);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1293,15 +1293,15 @@ void MicrostrainParser::parseRTKPacket(const mscl::MipDataPacket& packet)
 
         if (point.qualifier() == mscl::MipTypes::CH_TIME_OF_WEEK)
         {
-          publishers_->rtk_msg_.gps_tow = point.as_double();
+          rtk_msg_.gps_tow = point.as_double();
         }
         else if (point.qualifier() == mscl::MipTypes::CH_WEEK_NUMBER)
         {
-          publishers_->rtk_msg_.gps_week = point.as_uint16();
+          rtk_msg_.gps_week = point.as_uint16();
         }
         else if (point.qualifier() == mscl::MipTypes::CH_STATUS)
         {
-          publishers_->rtk_msg_.epoch_status = point.as_uint16();
+          rtk_msg_.epoch_status = point.as_uint16();
         }
         else if (point.qualifier() == mscl::MipTypes::CH_FLAGS)
         {
@@ -1322,50 +1322,50 @@ void MicrostrainParser::parseRTKPacket(const mscl::MipDataPacket& packet)
               // Cast to v1 dongle
               mscl::RTKDeviceStatusFlags_v1 dongle_status_v1 = dongle_status;
 
-              publishers_->rtk_msg_v1_.raw_status_flags = raw_value;
-              publishers_->rtk_msg_v1_.dongle_version = version;
-              publishers_->rtk_msg_v1_.dongle_controller_state = dongle_status_v1.controllerState();
-              publishers_->rtk_msg_v1_.dongle_platform_state = dongle_status_v1.platformState();
-              publishers_->rtk_msg_v1_.dongle_controller_status = dongle_status_v1.controllerStatusCode();
-              publishers_->rtk_msg_v1_.dongle_platform_status = dongle_status_v1.platformStatusCode();
-              publishers_->rtk_msg_v1_.dongle_reset_reason = dongle_status_v1.resetReason();
-              publishers_->rtk_msg_v1_.dongle_signal_quality = dongle_status_v1.signalQuality();
+              rtk_msg_v1_.raw_status_flags = raw_value;
+              rtk_msg_v1_.dongle_version = version;
+              rtk_msg_v1_.dongle_controller_state = dongle_status_v1.controllerState();
+              rtk_msg_v1_.dongle_platform_state = dongle_status_v1.platformState();
+              rtk_msg_v1_.dongle_controller_status = dongle_status_v1.controllerStatusCode();
+              rtk_msg_v1_.dongle_platform_status = dongle_status_v1.platformStatusCode();
+              rtk_msg_v1_.dongle_reset_reason = dongle_status_v1.resetReason();
+              rtk_msg_v1_.dongle_signal_quality = dongle_status_v1.signalQuality();
               break;
             }
             // v2
             default:
             {
-              publishers_->rtk_msg_.raw_status_flags = raw_value;
-              publishers_->rtk_msg_.dongle_version = version;
-              publishers_->rtk_msg_.dongle_modem_state = dongle_status.modemState();
-              publishers_->rtk_msg_.dongle_connection_type = dongle_status.connectionType();
-              publishers_->rtk_msg_.dongle_rssi = -dongle_status.rssi();
-              publishers_->rtk_msg_.dongle_signal_quality = dongle_status.signalQuality();
-              publishers_->rtk_msg_.dongle_tower_change_indicator = dongle_status.towerChangeIndicator();
-              publishers_->rtk_msg_.dongle_nmea_timeout = dongle_status.nmeaTimeout();
-              publishers_->rtk_msg_.dongle_server_timeout = dongle_status.serverTimeout();
-              publishers_->rtk_msg_.dongle_rtcm_timeout = dongle_status.rtcmTimeout();
-              publishers_->rtk_msg_.dongle_out_of_range = dongle_status.deviceOutOfRange();
-              publishers_->rtk_msg_.dongle_corrections_unavailable = dongle_status.correctionsUnavailable();
+              rtk_msg_.raw_status_flags = raw_value;
+              rtk_msg_.dongle_version = version;
+              rtk_msg_.dongle_modem_state = dongle_status.modemState();
+              rtk_msg_.dongle_connection_type = dongle_status.connectionType();
+              rtk_msg_.dongle_rssi = -dongle_status.rssi();
+              rtk_msg_.dongle_signal_quality = dongle_status.signalQuality();
+              rtk_msg_.dongle_tower_change_indicator = dongle_status.towerChangeIndicator();
+              rtk_msg_.dongle_nmea_timeout = dongle_status.nmeaTimeout();
+              rtk_msg_.dongle_server_timeout = dongle_status.serverTimeout();
+              rtk_msg_.dongle_rtcm_timeout = dongle_status.rtcmTimeout();
+              rtk_msg_.dongle_out_of_range = dongle_status.deviceOutOfRange();
+              rtk_msg_.dongle_corrections_unavailable = dongle_status.correctionsUnavailable();
               break;
             }
           }
         }
         else if (point.qualifier() == mscl::MipTypes::CH_GPS_CORRECTION_LATENCY)
         {
-          publishers_->rtk_msg_.gps_correction_latency = point.as_float();
+          rtk_msg_.gps_correction_latency = point.as_float();
         }
         else if (point.qualifier() == mscl::MipTypes::CH_GLONASS_CORRECTION_LATENCY)
         {
-          publishers_->rtk_msg_.glonass_correction_latency = point.as_float();
+          rtk_msg_.glonass_correction_latency = point.as_float();
         }
         else if (point.qualifier() == mscl::MipTypes::CH_GALILEO_CORRECTION_LATENCY)
         {
-          publishers_->rtk_msg_.galileo_correction_latency = point.as_float();
+          rtk_msg_.galileo_correction_latency = point.as_float();
         }
         else if (point.qualifier() == mscl::MipTypes::CH_BEIDOU_CORRECTION_LATENCY)
         {
-          publishers_->rtk_msg_.beidou_correction_latency = point.as_float();
+          rtk_msg_.beidou_correction_latency = point.as_float();
         }
       }
       break;
@@ -1380,23 +1380,23 @@ void MicrostrainParser::parseRTKPacket(const mscl::MipDataPacket& packet)
       // v1
       case 0:
       {
-        publishers_->rtk_msg_v1_.gps_tow = publishers_->rtk_msg_.gps_tow;
-        publishers_->rtk_msg_v1_.gps_week = publishers_->rtk_msg_.gps_week;
-        publishers_->rtk_msg_v1_.epoch_status = publishers_->rtk_msg_.epoch_status;
-        publishers_->rtk_msg_v1_.gps_correction_latency = publishers_->rtk_msg_.gps_correction_latency;
-        publishers_->rtk_msg_v1_.glonass_correction_latency = publishers_->rtk_msg_.glonass_correction_latency;
-        publishers_->rtk_msg_v1_.galileo_correction_latency = publishers_->rtk_msg_.galileo_correction_latency;
-        publishers_->rtk_msg_v1_.beidou_correction_latency = publishers_->rtk_msg_.beidou_correction_latency;
+        rtk_msg_v1_.gps_tow = rtk_msg_.gps_tow;
+        rtk_msg_v1_.gps_week = rtk_msg_.gps_week;
+        rtk_msg_v1_.epoch_status = rtk_msg_.epoch_status;
+        rtk_msg_v1_.gps_correction_latency = rtk_msg_.gps_correction_latency;
+        rtk_msg_v1_.glonass_correction_latency = rtk_msg_.glonass_correction_latency;
+        rtk_msg_v1_.galileo_correction_latency = rtk_msg_.galileo_correction_latency;
+        rtk_msg_v1_.beidou_correction_latency = rtk_msg_.beidou_correction_latency;
 
         if (publishers_->rtk_pub_v1_ != nullptr)
-          publishers_->rtk_pub_v1_->publish(publishers_->rtk_msg_v1_);
+          publishers_->rtk_pub_v1_->publish(rtk_msg_v1_);
         break;
       }
       // v2
       default:
       {
         if (publishers_->rtk_pub_ != nullptr)
-          publishers_->rtk_pub_->publish(publishers_->rtk_msg_);
+          publishers_->rtk_pub_->publish(rtk_msg_);
         break;
       }
     }

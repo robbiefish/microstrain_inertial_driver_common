@@ -22,6 +22,7 @@
 
 #include "microstrain_inertial_driver_common/microstrain_defs.h"
 #include "microstrain_inertial_driver_common/microstrain_ros_funcs.h"
+#include "microstrain_inertial_driver_common/mip_topic_mapping.h"
 
 namespace microstrain
 {
@@ -111,25 +112,12 @@ public:
   bool configureIMU(RosNodeType* node);
 
   /**
-   * \brief Configures IMU data rates on the inertial device. This is where the data being published will actually be disabled or setup to stream
-   * \return true if the data rates were configured and false if an error occured
-   */
-  bool configureIMUDataRates();
-
-  /**
    * \brief Configures GNSS settings on the inertial device
    * \param node  The ROS node that contains configuration information. For ROS1 this is the private node handle ("~")
    * \param gnss_id  The ID of the GNSS receiver that we want to configure
    * \return true if configuration was successful and false if configuration failed
    */
   bool configureGNSS(RosNodeType* node, uint8_t gnss_id);
-
-  /**
-   * \brief Configures GNSS1 data rates on the inertial device. This is where the data being published will actually be disabled or setup to stream
-   * \param gnss_id  The ID of the GNSS receiver that we want to configure
-   * \return true if the data rates were configured and false if an error occured
-   */
-  bool configureGNSSDataRates(uint8_t gnss_id);
 
   /**
    * \brief Configures RTK settings on the inertial device
@@ -139,12 +127,6 @@ public:
   bool configureRTK(RosNodeType* node);
 
   /**
-   * \brief Configures RTK data rates on the inertial device. This is where the data being published will actually be disabled or setup to stream
-   * \return true if the data rates were configured and false if an error occured
-   */
-  bool configureRTKDataRates();
-
-  /**
    * \brief Configures Filter settings on the inertial device
    * \param node  The ROS node that contains configuration information. For ROS1 this is the private node handle ("~")
    * \return true if configuration was successful and false if configuration failed
@@ -152,10 +134,10 @@ public:
   bool configureFilter(RosNodeType* node);
 
   /**
-   * \brief Configures Filter data rates on the inertial device. This is where the data being published will actually be disabled or setup to stream
+   * \brief Configures data rates on the inertial device. This is where the data being published will actually be disabled or setup to stream
    * \return true if the data rates were configured and false if an error occured
    */
-  bool configureFilterDataRates();
+  bool configureDataRates();
 
   /**
    * \brief Configures Sensor 2 Vehicle settings on the inertial device
@@ -172,8 +154,11 @@ public:
   bool configureEvents(RosNodeType* node);
 
   // Device pointer used to interact with the device
-  std::unique_ptr<mscl::InertialNode> inertial_device_;
+  std::shared_ptr<mscl::InertialNode> inertial_device_;
   std::unique_ptr<mscl::Connection> aux_connection_;
+
+  // Mapping between ROS topics and MIP fields
+  MIPTopicMapping topic_mapping_;
 
   // Config read from the device
   bool supports_gnss1_;
@@ -326,15 +311,6 @@ private:
    * \param default_data_rate  The value to set data_rate to if it is set to -1
    */
   static void getDataRateParam(RosNodeType* node, const std::string& key, int& data_rate, int default_data_rate);
-
-  /**
-   * \brief Convenience function to populate a list of channels and their requested data rates based on whether the device supports them
-   * \param data_class  The data class that the channels in channel_fields belong to
-   * \param channel_fields  The channel fields to set to stream at the requested data_rate
-   * \param data_rate  The rate in hertz to stream the MIP data at
-   * \param channels_to_stream  List of channels and their associated rate that will be populated with the proper channels and data rates
-   */
-  void getSupportedMipChannels(mscl::MipTypes::DataClass data_class, const mscl::MipTypes::MipChannelFields& channel_fields, int data_rate, mscl::MipChannels* channels_to_stream);
 
   /**
    * \brief Enables or disables a filter aiding measurement

@@ -148,6 +148,43 @@ private:
   float curr_filter_att_uncert_yaw_;
 
   std::string aux_string_;
+
+  // IMU Messages
+  ImuMsg imu_msg_;
+  TimeReferenceMsg imu_time_msg_;
+  MagneticFieldMsg mag_msg_;
+  GPSCorrelationTimestampStampedMsg gps_corr_msg_;
+
+  // GNSS Messages
+  NavSatFixMsg gnss_msg_[NUM_GNSS];
+  OdometryMsg gnss_odom_msg_[NUM_GNSS];
+  TimeReferenceMsg gnss_time_msg_[NUM_GNSS];
+  GNSSAidingStatusMsg gnss_aiding_status_msg_[NUM_GNSS];
+  GNSSFixInfoMsg gnss_fix_info_msg_[NUM_GNSS];
+
+  // RTK Messages
+  RTKStatusMsg rtk_msg_;
+  RTKStatusMsgV1 rtk_msg_v1_;
+
+  // Filter Messages
+  OdometryMsg filter_msg_;
+  ImuMsg filtered_imu_msg_;
+  OdometryMsg filter_relative_pos_msg_;
+  FilterStatusMsg filter_status_msg_;
+  FilterHeadingStateMsg filter_heading_state_msg_;
+  FilterHeadingMsg filter_heading_msg_;
+  FilterAidingMeasurementSummaryMsg filter_aiding_measurement_summary_msg_;
+  GNSSDualAntennaStatusMsg gnss_dual_antenna_status_msg_;
+
+  // Device Status Message
+  StatusMsg device_status_msg_;
+
+  // NMEA Sentence Message
+  NMEASentenceMsg nmea_sentence_msg_;
+
+  // Published transforms
+  TransformStampedMsg filter_transform_msg_;
+
 };  // struct MicrostrainParser
 
 }  // namespace microstrain

@@ -208,6 +208,7 @@ bool MicrostrainPublishers::configure()
 
 void MicrostrainPublishers::publishDeviceStatus()
 {
+  /*
   if (!config_->inertial_device_)
   {
     return;
@@ -324,6 +325,7 @@ void MicrostrainPublishers::publishDeviceStatus()
       device_status_pub_->publish(device_status_msg_);
     }
   }
+  */
 }
 
 }  // namespace microstrain
