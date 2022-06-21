@@ -24,11 +24,20 @@ MicrostrainPublishers::MicrostrainPublishers(RosNodeType* node, MicrostrainConfi
 
 bool MicrostrainPublishers::configure()
 {
+  if (config_->topic_mapping_.shouldPublish(IMU_DATA_TOPIC))
+    imu_pub_map_.configurePublisher(IMU_DATA_TOPIC);
+  if (config_->topic_mapping_.shouldPublish(IMU_INTERNAL_TIME_REF_TOPIC))
+    imu_time_pub_map_.configurePublisher(IMU_INTERNAL_TIME_REF_TOPIC);
+
+  // TODO: This seems to be implemented differently
+  /**
   if (config_->inertial_device_->features().supportsCommand(mscl::MipTypes::Command::CMD_DEVICE_STATUS))
   {
     device_status_pub_ = create_publisher<StatusMsg>(node_, "device/status", 100);
   }
+  *?
 
+  /**
   if (config_->publish_imu_)
   {
     // Publish IMU data, if enabled
@@ -203,6 +212,7 @@ bool MicrostrainPublishers::configure()
     MICROSTRAIN_INFO(node_, "Publishing NMEA sentences from aux port");
     nmea_sentence_pub_ = create_publisher<NMEASentenceMsg>(node_, "nmea/sentence", 100);
   }
+  */
   return true;
 }
 

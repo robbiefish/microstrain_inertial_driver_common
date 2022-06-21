@@ -23,6 +23,7 @@
 #include "microstrain_inertial_driver_common/microstrain_defs.h"
 #include "microstrain_inertial_driver_common/microstrain_ros_funcs.h"
 #include "microstrain_inertial_driver_common/mip_topic_mapping.h"
+#include "microstrain_inertial_driver_common/mip_publisher_pool.h"
 
 namespace microstrain
 {
@@ -140,6 +141,12 @@ public:
   bool configureDataRates();
 
   /**
+   * \brief Initializes and configures publishers for streaming data
+   * \return true if the publishers were configured and false if an error occured
+   */
+  bool configurePublishers();
+
+  /**
    * \brief Configures Sensor 2 Vehicle settings on the inertial device
    * \param node  The ROS node that contains configuration information. For ROS1 this is the private node handle ("~")
    * \return true if configuration was successful and false if configuration failed
@@ -237,36 +244,6 @@ public:
   std::vector<double> imu_angular_cov_;
   std::vector<double> imu_orientation_cov_;
 
-  // Update rates
-  int imu_data_rate_;
-  int gnss_data_rate_[NUM_GNSS];
-  int filter_data_rate_;
-
-  // IMU update rates
-  int imu_raw_data_rate_;
-  int imu_mag_data_rate_;
-  int imu_gps_corr_data_rate_;
-
-  // GNSS update rates
-  int gnss_nav_sat_fix_data_rate_[NUM_GNSS] = { DEFAULT_DATA_RATE };
-  int gnss_odom_data_rate_[NUM_GNSS] = { DEFAULT_DATA_RATE };
-  int gnss_time_reference_data_rate_[NUM_GNSS] = { DEFAULT_DATA_RATE };
-  int gnss_fix_info_data_rate_[NUM_GNSS] = { DEFAULT_DATA_RATE };
-
-  // RTK update rates
-  int rtk_status_data_rate_ = DEFAULT_DATA_RATE;  // Note that this will be used for both the RTKv1 and RTKv2 status messages
-
-  // Filter update rates
-  int filter_status_data_rate_ = DEFAULT_DATA_RATE;
-  int filter_heading_data_rate_ = DEFAULT_DATA_RATE;
-  int filter_heading_state_data_rate_ = DEFAULT_DATA_RATE;
-  int filter_odom_data_rate_ = DEFAULT_DATA_RATE;
-  int filter_imu_data_rate_ = DEFAULT_DATA_RATE;
-  int filter_relative_odom_data_rate_ = DEFAULT_DATA_RATE;  // Note that this will be used for both the relative odometry message and the transform published on the /tf topic
-  int filter_aiding_status_data_rate_ = DEFAULT_DATA_RATE;
-  int filter_gnss_dual_antenna_status_data_rate_ = DEFAULT_DATA_RATE;
-  int filter_aiding_measurement_summary_data_rate_ = DEFAULT_DATA_RATE;
-
   // Gnss antenna offsets
   std::vector<double> gnss_antenna_offset_[NUM_GNSS];
 
@@ -297,21 +274,49 @@ public:
   // Event parameters
   bool event_setup_;
 
+  // IMU Publishers
+  MIPPublisherPool<ImuPubType, ImuMsg> imu_pub_map_;
+  MIPPublisherPool<TimeReferencePubType, TimeReferenceMsg> imu_time_pub_map_;
+  MIPPublisherPool<MagneticFieldPubType, MagneticFieldMsg> mag_pub_map_;
+  MIPPublisherPool<GPSCorrelationTimestampStampedPubType, GPSCorrelationTimestampStampedMsg> gps_corr_pub_map_;
+
+  // GNSS Publishers
+  MIPPublisherPool<NavSatFixPubType, NavSatFixMsg> gnss_pub_map_[NUM_GNSS];
+  MIPPublisherPool<OdometryPubType, OdometryMsg> gnss_odom_pub_map_[NUM_GNSS];
+  MIPPublisherPool<TimeReferencePubType, TimeReferenceMsg> gnss_time_pub_map_[NUM_GNSS];
+  MIPPublisherPool<GNSSAidingStatusPubType, GNSSAidingStatusMsg> gnss_aiding_status_pub_map_[NUM_GNSS];
+  MIPPublisherPool<GNSSFixInfoPubType, GNSSFixInfoMsg> gnss_fix_info_pub_map_[NUM_GNSS];
+
+  // RTK Data publisher
+  MIPPublisherPool<RTKStatusPubType, RTKStatusMsg> rtk_pub_map_;
+  MIPPublisherPool<RTKStatusPubTypeV1, RTKStatusMsgV1> rtk_pub_map_v1_;
+
+  // Filter Publishers
+  MIPPublisherPool<FilterStatusPubType, FilterStatusMsg> filter_status_pub_map_;
+  MIPPublisherPool<FilterHeadingPubType, FilterHeadingMsg> filter_heading_pub_map_;
+  MIPPublisherPool<FilterHeadingStatePubType, FilterHeadingStateMsg> filter_heading_state_pub_map_;
+  MIPPublisherPool<FilterAidingMeasurementSummaryPubType, FilterAidingMeasurementSummaryMsg> filter_aiding_measurement_summary_pub_map_;
+  MIPPublisherPool<OdometryPubType, OdometryMsg> filter_pub_map_;
+  MIPPublisherPool<ImuPubType, ImuMsg> filtered_imu_pub_map_;
+  MIPPublisherPool<OdometryPubType, OdometryMsg> filter_relative_pos_pub_map_;
+  MIPPublisherPool<GNSSDualAntennaStatusPubType, GNSSDualAntennaStatusMsg> gnss_dual_antenna_status_pub_map_;
+
+  // Device Status Publisher
+  MIPPublisherPool<StatusPubType, StatusMsg> device_status_pub_map_;
+
+  // NMEA Sentence Publisher
+  MIPPublisherPool<NMEASentencePubType, NMEASentenceMsg> nmea_sentence_pub_map_;
+
+  // Transform Broadcaster
+  MIPPublisherPool<TransformBroadcasterType, TransformStampedMsg> relative_transform_pub_map_;
+
   // TODO(robbiefish): We need a better way to handle multiple message types here
   uint8_t time_reference_event_id_;
   TimeReferenceMsg time_reference_msg_;
-  TimeReferencePubType time_reference_pub_ = nullptr;
+  TimeReferencePubType time_reference_pub_;
+  MIPPublisherPool<TimeReferencePubType, TimeReferenceMsg> time_reference_pub_map_;
 
 private:
-  /**
-   * \brief Gets the raw value of a data rate parameter, or populates the parameter with the default data rate if it is set to the default value
-   * \param node  The ROS node that contains configuration information. For ROS1 this is the private node handle ("~")
-   * \param key  The key to look for in the config for the data rate param
-   * \param data_rate  The data rate value to populate with the config parameter
-   * \param default_data_rate  The value to set data_rate to if it is set to -1
-   */
-  static void getDataRateParam(RosNodeType* node, const std::string& key, int& data_rate, int default_data_rate);
-
   /**
    * \brief Enables or disables a filter aiding measurement
    * \param aiding_measurement  The aiding measurement to enable or disable

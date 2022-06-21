@@ -157,6 +157,7 @@ void MicrostrainParser::parseIMUPacket(const mscl::MipDataPacket& packet)
 
   // Act diferently if this is an event
   // TODO(robbiefish): How do we implement this so it scales with multiple message types??
+  /*
   if (packet.shared().hasEventSource())
   {
     if (packet.shared().eventSource() == config_->time_reference_event_id_)
@@ -168,6 +169,7 @@ void MicrostrainParser::parseIMUPacket(const mscl::MipDataPacket& packet)
       return;
     }
   }
+  */
 
   // Handle time
   const RosTimeType packet_time = getPacketTimestamp(packet);

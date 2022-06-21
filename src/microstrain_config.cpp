@@ -28,6 +28,44 @@ namespace microstrain
 {
 MicrostrainConfig::MicrostrainConfig(RosNodeType* node) : node_(node)
 {
+  // IMU Publishers
+  imu_pub_map_ = MIPPublisherPool<ImuPubType, ImuMsg>(node_);
+  imu_time_pub_map_ = MIPPublisherPool<TimeReferencePubType, TimeReferenceMsg>(node_);
+  mag_pub_map_ = MIPPublisherPool<MagneticFieldPubType, MagneticFieldMsg>(node_);
+  gps_corr_pub_map_ = MIPPublisherPool<GPSCorrelationTimestampStampedPubType, GPSCorrelationTimestampStampedMsg>(node_);
+
+  // GNSS Publishers
+  for (int i = 0; i < NUM_GNSS; i++)
+  {
+    gnss_pub_map_[i] = MIPPublisherPool<NavSatFixPubType, NavSatFixMsg>(node_);
+    gnss_odom_pub_map_[i] = MIPPublisherPool<OdometryPubType, OdometryMsg>(node_);
+    gnss_time_pub_map_[i] = MIPPublisherPool<TimeReferencePubType, TimeReferenceMsg>(node_);
+    gnss_aiding_status_pub_map_[i] = MIPPublisherPool<GNSSAidingStatusPubType, GNSSAidingStatusMsg>(node_);
+    gnss_fix_info_pub_map_[i] = MIPPublisherPool<GNSSFixInfoPubType, GNSSFixInfoMsg>(node_);
+  }
+
+  // RTK Data publisher
+  rtk_pub_map_ = MIPPublisherPool<RTKStatusPubType, RTKStatusMsg>(node_);
+  rtk_pub_map_v1_ = MIPPublisherPool<RTKStatusPubTypeV1, RTKStatusMsgV1>(node_);
+
+  // Filter Publishers
+  filter_status_pub_map_ = MIPPublisherPool<FilterStatusPubType, FilterStatusMsg>(node_);
+  filter_heading_pub_map_ = MIPPublisherPool<FilterHeadingPubType, FilterHeadingMsg>(node_);
+  filter_heading_state_pub_map_ = MIPPublisherPool<FilterHeadingStatePubType, FilterHeadingStateMsg>(node_);
+  filter_aiding_measurement_summary_pub_map_ = MIPPublisherPool<FilterAidingMeasurementSummaryPubType, FilterAidingMeasurementSummaryMsg>(node_);
+  filter_pub_map_ = MIPPublisherPool<OdometryPubType, OdometryMsg>(node_);
+  filtered_imu_pub_map_ = MIPPublisherPool<ImuPubType, ImuMsg>(node_);
+  filter_relative_pos_pub_map_ = MIPPublisherPool<OdometryPubType, OdometryMsg>(node_);
+  gnss_dual_antenna_status_pub_map_ = MIPPublisherPool<GNSSDualAntennaStatusPubType, GNSSDualAntennaStatusMsg>(node_);
+
+  // Device Status Publisher
+  device_status_pub_map_ = MIPPublisherPool<StatusPubType, StatusMsg>(node_);
+
+  // NMEA Sentence Publisher
+  nmea_sentence_pub_map_ = MIPPublisherPool<NMEASentencePubType, NMEASentenceMsg>(node_);
+
+  // Transform Broadcaster
+  relative_transform_pub_map_ = MIPPublisherPool<TransformBroadcasterType, TransformStampedMsg>(node_);
 }
 
 bool MicrostrainConfig::configure(RosNodeType* node)
@@ -63,37 +101,18 @@ bool MicrostrainConfig::configure(RosNodeType* node)
   get_param<bool>(node, "publish_imu", publish_imu_, true);
   get_param<bool>(node, "publish_gps_corr", publish_gps_corr_, false);
   get_param<bool>(node, "publish_internal_time_ref", publish_internal_time_ref_, false);
-  get_param<int32_t>(node, "imu_data_rate", imu_data_rate_, 10);
   get_param<std::vector<double>>(node, "imu_orientation_cov", imu_orientation_cov_, DEFAULT_MATRIX);
   get_param<std::vector<double>>(node, "imu_linear_cov", imu_linear_cov_, DEFAULT_MATRIX);
   get_param<std::vector<double>>(node, "imu_angular_cov", imu_angular_cov_, DEFAULT_MATRIX);
   get_param<std::string>(node, "imu_frame_id", imu_frame_id_, imu_frame_id_);
 
-  // IMU Data rate
-  getDataRateParam(node, "imu_raw_data_rate", imu_raw_data_rate_, imu_data_rate_);
-  getDataRateParam(node, "imu_mag_data_rate", imu_mag_data_rate_, imu_data_rate_);
-  getDataRateParam(node, "imu_gps_corr_data_rate", imu_gps_corr_data_rate_, imu_data_rate_);
-
   // GNSS 1/2
   get_param<bool>(node, "publish_gnss1", publish_gnss_[GNSS1_ID], false);
   get_param<bool>(node, "publish_gnss2", publish_gnss_[GNSS2_ID], false);
-  get_param<int32_t>(node, "gnss1_data_rate", gnss_data_rate_[GNSS1_ID], 1);
-  get_param<int32_t>(node, "gnss2_data_rate", gnss_data_rate_[GNSS2_ID], 1);
   get_param<std::vector<double>>(node, "gnss1_antenna_offset", gnss_antenna_offset_[GNSS1_ID], DEFAULT_VECTOR);
   get_param<std::vector<double>>(node, "gnss2_antenna_offset", gnss_antenna_offset_[GNSS2_ID], DEFAULT_VECTOR);
   get_param<std::string>(node, "gnss1_frame_id", gnss_frame_id_[GNSS1_ID], gnss_frame_id_[GNSS1_ID]);
   get_param<std::string>(node, "gnss2_frame_id", gnss_frame_id_[GNSS2_ID], gnss_frame_id_[GNSS2_ID]);
-
-  // GNSS 1/2 Data rates
-  getDataRateParam(node, "gnss1_nav_sat_fix_data_rate", gnss_nav_sat_fix_data_rate_[GNSS1_ID], gnss_data_rate_[GNSS1_ID]);
-  getDataRateParam(node, "gnss1_odom_data_rate", gnss_odom_data_rate_[GNSS1_ID], gnss_data_rate_[GNSS1_ID]);
-  getDataRateParam(node, "gnss1_time_reference_data_rate", gnss_time_reference_data_rate_[GNSS1_ID], gnss_data_rate_[GNSS1_ID]);
-  getDataRateParam(node, "gnss1_fix_info_data_rate", gnss_fix_info_data_rate_[GNSS1_ID], gnss_data_rate_[GNSS1_ID]);
-
-  getDataRateParam(node, "gnss2_nav_sat_fix_data_rate", gnss_nav_sat_fix_data_rate_[GNSS2_ID], gnss_data_rate_[GNSS2_ID]);
-  getDataRateParam(node, "gnss2_odom_data_rate", gnss_odom_data_rate_[GNSS2_ID], gnss_data_rate_[GNSS2_ID]);
-  getDataRateParam(node, "gnss2_time_reference_data_rate", gnss_time_reference_data_rate_[GNSS2_ID], gnss_data_rate_[GNSS2_ID]);
-  getDataRateParam(node, "gnss2_fix_info_data_rate", gnss_fix_info_data_rate_[GNSS2_ID], gnss_data_rate_[GNSS2_ID]);
 
   // HARDWARE ODOM
   get_param<bool>(node, "enable_hardware_odometer", enable_hardware_odometer_, false);
@@ -108,12 +127,8 @@ bool MicrostrainConfig::configure(RosNodeType* node)
   get_param<bool>(node, "publish_nmea", publish_nmea_, false);
   get_param<std::string>(node, "nmea_frame_id", nmea_frame_id_, nmea_frame_id_);
 
-  // RTK Data rate
-  getDataRateParam(node, "rtk_status_data_rate", rtk_status_data_rate_, 1);
-
   // FILTER
   get_param<bool>(node, "publish_filter", publish_filter_, false);
-  get_param<int32_t>(node, "filter_data_rate", filter_data_rate_, 10);
   get_param<std::string>(node, "filter_frame_id", filter_frame_id_, filter_frame_id_);
   get_param<std::string>(node, "filter_child_frame_id", filter_child_frame_id_, filter_child_frame_id_);
   get_param<bool>(node, "publish_relative_position", publish_filter_relative_pos_, false);
@@ -137,17 +152,6 @@ bool MicrostrainConfig::configure(RosNodeType* node)
                          std::string("/external_gps_time"));
   get_param<std::string>(node, "filter_external_speed_topic", external_speed_topic_, "/external_speed");
   get_param<bool>(node, "filter_use_compensated_accel", filter_use_compensated_accel_, true);
-
-  // Filter Data Rates
-  getDataRateParam(node, "filter_status_data_rate", filter_status_data_rate_, filter_data_rate_);
-  getDataRateParam(node, "filter_heading_data_rate", filter_heading_data_rate_, filter_data_rate_);
-  getDataRateParam(node, "filter_heading_state_data_rate", filter_heading_state_data_rate_, filter_data_rate_);
-  getDataRateParam(node, "filter_aiding_measurement_summary_data_rate", filter_aiding_measurement_summary_data_rate_, filter_data_rate_);
-  getDataRateParam(node, "filter_odom_data_rate", filter_odom_data_rate_, filter_data_rate_);
-  getDataRateParam(node, "filter_imu_data_rate", filter_imu_data_rate_, filter_data_rate_);
-  getDataRateParam(node, "filter_relative_odom_data_rate", filter_relative_odom_data_rate_, filter_data_rate_);
-  getDataRateParam(node, "filter_gnss_dual_antenna_status_data_rate", filter_gnss_dual_antenna_status_data_rate_, filter_data_rate_);
-  getDataRateParam(node, "filter_aiding_status_data_rate", filter_aiding_status_data_rate_, filter_data_rate_);
 
   // Enable dual antenna messages
   publish_gnss_dual_antenna_status_ = filter_enable_gnss_heading_aiding_;
@@ -294,6 +298,8 @@ bool MicrostrainConfig::connectDevice(RosNodeType* node)
 
   // Initialize the topic mappings
   topic_mapping_ = MIPTopicMapping(node_, inertial_device_);
+  if (!topic_mapping_.configureDataRates(node))
+    return false;
 
   return true;
 }
@@ -866,39 +872,39 @@ bool MicrostrainConfig::configureFilter(RosNodeType* node)
 bool MicrostrainConfig::configureDataRates()
 {
   // IMU streaming
-  topic_mapping_.streamTopic(IMU_DATA_TOPIC, imu_raw_data_rate_);
+  topic_mapping_.streamTopic(IMU_DATA_TOPIC);
   if (publish_internal_time_ref_)
-    topic_mapping_.streamTopic(IMU_INTERNAL_TIME_REF_TOPIC, imu_raw_data_rate_);  // Stream the time ref at the same rate as IMU data
-  topic_mapping_.streamTopic(IMU_MAG_TOPIC, imu_mag_data_rate_);
-  topic_mapping_.streamTopic(IMU_GPS_CORR_TOPIC, imu_gps_corr_data_rate_);
+    topic_mapping_.streamTopic(IMU_INTERNAL_TIME_REF_TOPIC);  // Stream the time ref at the same rate as IMU data
+  topic_mapping_.streamTopic(IMU_MAG_TOPIC);
+  topic_mapping_.streamTopic(IMU_GPS_CORR_TOPIC);
 
   // GNSS1 streaming
-  topic_mapping_.streamTopic(GNSS1_NAVSATFIX_TOPIC, gnss_nav_sat_fix_data_rate_[GNSS1_ID]);
-  topic_mapping_.streamTopic(GNSS1_ODOM_TOPIC, gnss_odom_data_rate_[GNSS1_ID]);
-  topic_mapping_.streamTopic(GNSS1_TIME_REF_TOPIC, gnss_time_reference_data_rate_[GNSS1_ID]);
-  topic_mapping_.streamTopic(GNSS1_FIX_INFO_TOPIC, gnss_fix_info_data_rate_[GNSS1_ID]);
+  topic_mapping_.streamTopic(GNSS1_NAVSATFIX_TOPIC);
+  topic_mapping_.streamTopic(GNSS1_ODOM_TOPIC);
+  topic_mapping_.streamTopic(GNSS1_TIME_REF_TOPIC);
+  topic_mapping_.streamTopic(GNSS1_FIX_INFO_TOPIC);
 
   // GNSS2 streaming
-  topic_mapping_.streamTopic(GNSS2_NAVSATFIX_TOPIC, gnss_nav_sat_fix_data_rate_[GNSS2_ID]);
-  topic_mapping_.streamTopic(GNSS2_ODOM_TOPIC, gnss_odom_data_rate_[GNSS2_ID]);
-  topic_mapping_.streamTopic(GNSS2_TIME_REF_TOPIC, gnss_time_reference_data_rate_[GNSS2_ID]);
-  topic_mapping_.streamTopic(GNSS2_FIX_INFO_TOPIC, gnss_fix_info_data_rate_[GNSS2_ID]);
+  topic_mapping_.streamTopic(GNSS2_NAVSATFIX_TOPIC);
+  topic_mapping_.streamTopic(GNSS2_ODOM_TOPIC);
+  topic_mapping_.streamTopic(GNSS2_TIME_REF_TOPIC);
+  topic_mapping_.streamTopic(GNSS2_FIX_INFO_TOPIC);
 
   // RTK streaming
-  topic_mapping_.streamTopic(RTK_STATUS_TOPIC, rtk_status_data_rate_);
+  topic_mapping_.streamTopic(RTK_STATUS_TOPIC);
 
   // Filter streaming
-  topic_mapping_.streamTopic(FILTER_STATUS_TOPIC, filter_status_data_rate_);
-  topic_mapping_.streamTopic(FILTER_HEADING_TOPIC, filter_heading_data_rate_);
-  topic_mapping_.streamTopic(FILTER_HEADING_STATE_TOPIC, filter_heading_state_data_rate_);
-  topic_mapping_.streamTopic(FILTER_ODOM_TOPIC, filter_odom_data_rate_);
-  topic_mapping_.streamTopic(FILTER_IMU_DATA_TOPIC, filter_imu_data_rate_);
-  topic_mapping_.streamTopic(FILTER_RELATIVE_ODOM_TOPIC, filter_relative_odom_data_rate_);
+  topic_mapping_.streamTopic(FILTER_STATUS_TOPIC);
+  topic_mapping_.streamTopic(FILTER_HEADING_TOPIC);
+  topic_mapping_.streamTopic(FILTER_HEADING_STATE_TOPIC);
+  topic_mapping_.streamTopic(FILTER_ODOM_TOPIC);
+  topic_mapping_.streamTopic(FILTER_IMU_DATA_TOPIC);
+  topic_mapping_.streamTopic(FILTER_RELATIVE_ODOM_TOPIC);
   if (filter_enable_gnss_pos_vel_aiding_)
-    topic_mapping_.streamTopic(GNSS1_AIDING_STATUS_TOPIC, filter_aiding_status_data_rate_);
+    topic_mapping_.streamTopic(GNSS1_AIDING_STATUS_TOPIC);
   if (filter_enable_gnss_heading_aiding_)
-    topic_mapping_.streamTopic(FILTER_DUAL_ANTENNA_STATUS_TOPIC, filter_gnss_dual_antenna_status_data_rate_);
-  topic_mapping_.streamTopic(FILTER_AIDING_SUMMARY_TOPIC, filter_aiding_measurement_summary_data_rate_);
+    topic_mapping_.streamTopic(FILTER_DUAL_ANTENNA_STATUS_TOPIC);
+  topic_mapping_.streamTopic(FILTER_AIDING_SUMMARY_TOPIC);
 
   // Send the data rates and enable the streams
   try
@@ -910,6 +916,10 @@ bool MicrostrainConfig::configureDataRates()
     return false;
   }
   return true;
+}
+
+bool MicrostrainConfig::configurePublishers()
+{
 }
 
 bool MicrostrainConfig::configureSensor2vehicle(RosNodeType* node)
@@ -1242,14 +1252,6 @@ bool MicrostrainConfig::configureEvents(RosNodeType* node)
     
   }
   return true;
-}
-
-void MicrostrainConfig::getDataRateParam(RosNodeType* node, const std::string& key, int& data_rate, int default_data_rate)
-{
-  // Get the data rate, and if it is set to the default value, set the rate to the default rate
-  get_param<int>(node, key, data_rate, DEFAULT_DATA_RATE);
-  if (data_rate == DEFAULT_DATA_RATE)
-    data_rate = default_data_rate;
 }
 
 void MicrostrainConfig::configureFilterAidingMeasurement(const mscl::InertialTypes::AidingMeasurementSource aiding_measurement, const bool enable)

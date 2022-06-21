@@ -412,11 +412,11 @@ event_config : |  # Please note that this '|'' symbol MUST be here or ROS will a
   - trigger:
       type: "GPIO"
       config:
-        pin: 2
-        mode: "HIGH"
+        pin: 1
+        mode: "EDGE"
     action:
       type: "MESSAGE"
       config:
-        topic: "/cv7/timestamp"
-        message_type: "timestamp"  # Note that this does nothing right now
+        topic: "/cv7/event/data"
+        message_type: "imu/data"
         sample_rate: 0
