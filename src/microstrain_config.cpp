@@ -28,44 +28,6 @@ namespace microstrain
 {
 MicrostrainConfig::MicrostrainConfig(RosNodeType* node) : node_(node)
 {
-  // IMU Publishers
-  imu_pub_map_ = MIPPublisherPool<ImuPubType, ImuMsg>(node_);
-  imu_time_pub_map_ = MIPPublisherPool<TimeReferencePubType, TimeReferenceMsg>(node_);
-  mag_pub_map_ = MIPPublisherPool<MagneticFieldPubType, MagneticFieldMsg>(node_);
-  gps_corr_pub_map_ = MIPPublisherPool<GPSCorrelationTimestampStampedPubType, GPSCorrelationTimestampStampedMsg>(node_);
-
-  // GNSS Publishers
-  for (int i = 0; i < NUM_GNSS; i++)
-  {
-    gnss_pub_map_[i] = MIPPublisherPool<NavSatFixPubType, NavSatFixMsg>(node_);
-    gnss_odom_pub_map_[i] = MIPPublisherPool<OdometryPubType, OdometryMsg>(node_);
-    gnss_time_pub_map_[i] = MIPPublisherPool<TimeReferencePubType, TimeReferenceMsg>(node_);
-    gnss_aiding_status_pub_map_[i] = MIPPublisherPool<GNSSAidingStatusPubType, GNSSAidingStatusMsg>(node_);
-    gnss_fix_info_pub_map_[i] = MIPPublisherPool<GNSSFixInfoPubType, GNSSFixInfoMsg>(node_);
-  }
-
-  // RTK Data publisher
-  rtk_pub_map_ = MIPPublisherPool<RTKStatusPubType, RTKStatusMsg>(node_);
-  rtk_pub_map_v1_ = MIPPublisherPool<RTKStatusPubTypeV1, RTKStatusMsgV1>(node_);
-
-  // Filter Publishers
-  filter_status_pub_map_ = MIPPublisherPool<FilterStatusPubType, FilterStatusMsg>(node_);
-  filter_heading_pub_map_ = MIPPublisherPool<FilterHeadingPubType, FilterHeadingMsg>(node_);
-  filter_heading_state_pub_map_ = MIPPublisherPool<FilterHeadingStatePubType, FilterHeadingStateMsg>(node_);
-  filter_aiding_measurement_summary_pub_map_ = MIPPublisherPool<FilterAidingMeasurementSummaryPubType, FilterAidingMeasurementSummaryMsg>(node_);
-  filter_pub_map_ = MIPPublisherPool<OdometryPubType, OdometryMsg>(node_);
-  filtered_imu_pub_map_ = MIPPublisherPool<ImuPubType, ImuMsg>(node_);
-  filter_relative_pos_pub_map_ = MIPPublisherPool<OdometryPubType, OdometryMsg>(node_);
-  gnss_dual_antenna_status_pub_map_ = MIPPublisherPool<GNSSDualAntennaStatusPubType, GNSSDualAntennaStatusMsg>(node_);
-
-  // Device Status Publisher
-  device_status_pub_map_ = MIPPublisherPool<StatusPubType, StatusMsg>(node_);
-
-  // NMEA Sentence Publisher
-  nmea_sentence_pub_map_ = MIPPublisherPool<NMEASentencePubType, NMEASentenceMsg>(node_);
-
-  // Transform Broadcaster
-  relative_transform_pub_map_ = MIPPublisherPool<TransformBroadcasterType, TransformStampedMsg>(node_);
 }
 
 bool MicrostrainConfig::configure(RosNodeType* node)
@@ -905,16 +867,6 @@ bool MicrostrainConfig::configureDataRates()
   if (filter_enable_gnss_heading_aiding_)
     topic_mapping_.streamTopic(FILTER_DUAL_ANTENNA_STATUS_TOPIC);
   topic_mapping_.streamTopic(FILTER_AIDING_SUMMARY_TOPIC);
-
-  // Send the data rates and enable the streams
-  try
-  {
-    topic_mapping_.startStreaming();
-  }
-  catch (const mscl::Error& e)
-  {
-    return false;
-  }
   return true;
 }
 
@@ -1222,8 +1174,8 @@ bool MicrostrainConfig::configureEvents(RosNodeType* node)
         mscl::MipTypes::ChannelField::CH_FIELD_SENSOR_SHARED_EVENT_SOURCE,
         mscl::MipTypes::ChannelField::CH_FIELD_SENSOR_SHARED_REFERENCE_TIMESTAMP
       });
-      time_reference_event_id_ = i + 1;
-      time_reference_pub_ = create_publisher<TimeReferenceMsg>(node_, topic_entry.as<std::string>(), 10);
+      //time_reference_event_id_ = i + 1;
+      //time_reference_pub_ = create_publisher<TimeReferenceMsg>(node_, topic_entry.as<std::string>(), 10);
 
       const size_t sample_rate = sample_rate_entry.as<size_t>();
       if (sample_rate == 0)

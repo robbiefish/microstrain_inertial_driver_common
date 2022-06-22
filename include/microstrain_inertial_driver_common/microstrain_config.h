@@ -274,48 +274,6 @@ public:
   // Event parameters
   bool event_setup_;
 
-  // IMU Publishers
-  MIPPublisherPool<ImuPubType, ImuMsg> imu_pub_map_;
-  MIPPublisherPool<TimeReferencePubType, TimeReferenceMsg> imu_time_pub_map_;
-  MIPPublisherPool<MagneticFieldPubType, MagneticFieldMsg> mag_pub_map_;
-  MIPPublisherPool<GPSCorrelationTimestampStampedPubType, GPSCorrelationTimestampStampedMsg> gps_corr_pub_map_;
-
-  // GNSS Publishers
-  MIPPublisherPool<NavSatFixPubType, NavSatFixMsg> gnss_pub_map_[NUM_GNSS];
-  MIPPublisherPool<OdometryPubType, OdometryMsg> gnss_odom_pub_map_[NUM_GNSS];
-  MIPPublisherPool<TimeReferencePubType, TimeReferenceMsg> gnss_time_pub_map_[NUM_GNSS];
-  MIPPublisherPool<GNSSAidingStatusPubType, GNSSAidingStatusMsg> gnss_aiding_status_pub_map_[NUM_GNSS];
-  MIPPublisherPool<GNSSFixInfoPubType, GNSSFixInfoMsg> gnss_fix_info_pub_map_[NUM_GNSS];
-
-  // RTK Data publisher
-  MIPPublisherPool<RTKStatusPubType, RTKStatusMsg> rtk_pub_map_;
-  MIPPublisherPool<RTKStatusPubTypeV1, RTKStatusMsgV1> rtk_pub_map_v1_;
-
-  // Filter Publishers
-  MIPPublisherPool<FilterStatusPubType, FilterStatusMsg> filter_status_pub_map_;
-  MIPPublisherPool<FilterHeadingPubType, FilterHeadingMsg> filter_heading_pub_map_;
-  MIPPublisherPool<FilterHeadingStatePubType, FilterHeadingStateMsg> filter_heading_state_pub_map_;
-  MIPPublisherPool<FilterAidingMeasurementSummaryPubType, FilterAidingMeasurementSummaryMsg> filter_aiding_measurement_summary_pub_map_;
-  MIPPublisherPool<OdometryPubType, OdometryMsg> filter_pub_map_;
-  MIPPublisherPool<ImuPubType, ImuMsg> filtered_imu_pub_map_;
-  MIPPublisherPool<OdometryPubType, OdometryMsg> filter_relative_pos_pub_map_;
-  MIPPublisherPool<GNSSDualAntennaStatusPubType, GNSSDualAntennaStatusMsg> gnss_dual_antenna_status_pub_map_;
-
-  // Device Status Publisher
-  MIPPublisherPool<StatusPubType, StatusMsg> device_status_pub_map_;
-
-  // NMEA Sentence Publisher
-  MIPPublisherPool<NMEASentencePubType, NMEASentenceMsg> nmea_sentence_pub_map_;
-
-  // Transform Broadcaster
-  MIPPublisherPool<TransformBroadcasterType, TransformStampedMsg> relative_transform_pub_map_;
-
-  // TODO(robbiefish): We need a better way to handle multiple message types here
-  uint8_t time_reference_event_id_;
-  TimeReferenceMsg time_reference_msg_;
-  TimeReferencePubType time_reference_pub_;
-  MIPPublisherPool<TimeReferencePubType, TimeReferenceMsg> time_reference_pub_map_;
-
 private:
   /**
    * \brief Enables or disables a filter aiding measurement

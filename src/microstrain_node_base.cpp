@@ -91,6 +91,14 @@ bool MicrostrainNodeBase::activate()
   if (!node_)
     return false;
 
+  // Activate the publishers
+  MICROSTRAIN_DEBUG(node_, "Activating publishers");
+  if (!publishers_.activate())
+  {
+    MICROSTRAIN_ERROR(node_, "Failed to activate publishers");
+    return false;
+  }
+
   // Activate the subscribers
   MICROSTRAIN_DEBUG(node_, "Activating Subscribers");
   if (!subscribers_.activate())
@@ -99,9 +107,16 @@ bool MicrostrainNodeBase::activate()
     return false;
   }
 
-  // Resume the device
-  MICROSTRAIN_INFO(node_, "Resuming the device data streams");
-  config_.inertial_device_->resume();
+  // Start the device streaming
+  try
+  {
+    config_.topic_mapping_.startStreaming();
+  }
+  catch(const mscl::Error& e)
+  {
+    MICROSTRAIN_ERROR(node_, "Failed to start device streaming");
+    return false;
+  }
 
   return true;
 }
@@ -125,6 +140,14 @@ bool MicrostrainNodeBase::deactivate()
       // Not much we can actually do at this point, so just log the error
       MICROSTRAIN_ERROR(node_, "Unable to set node to idle: %s", e.what());
     }
+  }
+
+  // Deactivate the publishers
+  MICROSTRAIN_DEBUG(node_, "Deactivating publishers");
+  if (!publishers_.deactivate())
+  {
+    MICROSTRAIN_ERROR(node_, "Failed to deactivate publishers");
+    return false;
   }
 
   return true;
@@ -168,6 +191,14 @@ bool MicrostrainNodeBase::shutdown()
   // Close the raw data file if enabled
   if (config_.raw_file_enable_)
     config_.raw_file_.close();
+
+  // Reset the publishers
+  MICROSTRAIN_DEBUG(node_, "Resetting publishers");
+  if (!publishers_.reset())
+  {
+    MICROSTRAIN_ERROR(node_, "Failed to reset publishers");
+    return false;
+  }
 
   return true;
 }

@@ -23,7 +23,7 @@ MIPTopicMapping::MIPTopicMapping(RosNodeType* node, const std::shared_ptr<mscl::
     {
       const mscl::MipTypes::DataClass data_class = static_cast<mscl::MipTypes::DataClass>(mscl::Utils::msb(static_cast<uint16_t>(channel)));
       if (inertial_device_->features().supportsCategory(data_class))
-        if (std::find(data_classes.begin(), data_classes.end(), data_class) != data_classes.end())
+        if (std::find(data_classes.begin(), data_classes.end(), data_class) == data_classes.end())
           data_classes.push_back(data_class);
     }
   }
@@ -68,36 +68,39 @@ bool MIPTopicMapping::configureDataRates(RosNodeType* config_node)
         return false;
       }
     }
-    topic_info.data_rate = *std::max_element(data_class_data_rates.begin(), data_class_data_rates.end());
+    if (!data_class_data_rates.empty())
+      topic_info.data_rate = *std::max_element(data_class_data_rates.begin(), data_class_data_rates.end());
+    else
+      topic_info.data_rate = DATA_CLASS_DATA_RATE_DO_NOT_STREAM;
   }
   return true;
 }
 
-MipDataClasses MIPTopicMapping::getDataClasses(const std::string& topic)
+MipDataClasses MIPTopicMapping::getDataClasses(const std::string& topic) const
 {
   if (topic_info_mapping_.find(topic) != topic_info_mapping_.end())
-    return topic_info_mapping_[topic].data_classes;
+    return topic_info_mapping_.at(topic).data_classes;
   else
     return {};
 }
 
-MipChannelFields MIPTopicMapping::getChannelFields(const std::string& topic)
+MipChannelFields MIPTopicMapping::getChannelFields(const std::string& topic) const
 {
   if (topic_info_mapping_.find(topic) != topic_info_mapping_.end())
-    return topic_info_mapping_[topic].channel_fields;
+    return topic_info_mapping_.at(topic).channel_fields;
   else
     return {};
 }
 
-int32_t MIPTopicMapping::getDataRate(const std::string& topic)
+int32_t MIPTopicMapping::getDataRate(const std::string& topic) const
 {
   if (topic_info_mapping_.find(topic) != topic_info_mapping_.end())
-    return topic_info_mapping_[topic].data_rate;
+    return topic_info_mapping_.at(topic).data_rate;
   else
     return DATA_CLASS_DATA_RATE_DO_NOT_STREAM;
 }
 
-int32_t MIPTopicMapping::getMaxDataRate()
+int32_t MIPTopicMapping::getMaxDataRate() const
 {
   std::vector<int32_t> data_rates;
   for (const auto& element : getTopicToChannelFieldsMapping())
@@ -105,12 +108,12 @@ int32_t MIPTopicMapping::getMaxDataRate()
   return *std::max_element(data_rates.begin(), data_rates.end());
 }
 
-bool MIPTopicMapping::canPublish(const std::string& topic)
+bool MIPTopicMapping::canPublish(const std::string& topic) const
 {
-  return getChannelFields(topic).empty();
+  return !getChannelFields(topic).empty();
 }
 
-bool MIPTopicMapping::shouldPublish(const std::string& topic)
+bool MIPTopicMapping::shouldPublish(const std::string& topic) const
 {
   return canPublish(topic) && getDataRate(topic) != DATA_CLASS_DATA_RATE_DO_NOT_STREAM;
 }
@@ -151,6 +154,7 @@ void MIPTopicMapping::startStreaming()
     // Attempt to configure the device to stream
     try
     {
+      MICROSTRAIN_DEBUG(node_, "Enabling data class 0x%x", data_class);
       inertial_device_->setActiveChannelFields(data_class, channels);
       inertial_device_->enableDataStream(data_class);
     }
@@ -161,9 +165,13 @@ void MIPTopicMapping::startStreaming()
       throw e;
     }
   }
+
+  // Resume the device
+  MICROSTRAIN_INFO(node_, "Resuming the device data streams");
+  inertial_device_->resume();
 }
 
-std::map<std::string, MipChannelFields> MIPTopicMapping::getTopicToChannelFieldsMapping()
+std::map<std::string, MipChannelFields> MIPTopicMapping::getTopicToChannelFieldsMapping() const
 {
   // Get some information from the device to determine what mappings we need to create
   const bool multi_gnss = inertial_device_->features().supportsCategory(mscl::MipTypes::DataClass::CLASS_GNSS1);
@@ -200,7 +208,7 @@ std::map<std::string, MipChannelFields> MIPTopicMapping::getTopicToChannelFields
     {GNSS1_FIX_INFO_TOPIC, {
       multi_gnss ? mscl::MipTypes::ChannelField::CH_FIELD_GNSS_1_FIX_INFO : mscl::MipTypes::ChannelField::CH_FIELD_GNSS_FIX_INFO,
     }},
-    {GNSS1_FIX_INFO_TOPIC, {
+    {GNSS1_AIDING_STATUS_TOPIC, {
       mscl::MipTypes::ChannelField::CH_FIELD_ESTFILTER_POSITION_AIDING_STATUS,
     }},
 
@@ -218,7 +226,7 @@ std::map<std::string, MipChannelFields> MIPTopicMapping::getTopicToChannelFields
     {GNSS2_FIX_INFO_TOPIC, {
       mscl::MipTypes::ChannelField::CH_FIELD_GNSS_2_FIX_INFO,
     }},
-    {GNSS2_FIX_INFO_TOPIC, {
+    {GNSS2_AIDING_STATUS_TOPIC, {
       mscl::MipTypes::ChannelField::CH_FIELD_ESTFILTER_POSITION_AIDING_STATUS,
     }},
 
@@ -275,7 +283,7 @@ std::map<std::string, MipChannelFields> MIPTopicMapping::getTopicToChannelFields
 
 }
 
-std::map<std::string, std::string> MIPTopicMapping::getTopicToDataRateConfigKeyMapping()
+std::map<std::string, std::string> MIPTopicMapping::getTopicToDataRateConfigKeyMapping() const
 {
   return {
     // IMU data rates
@@ -314,13 +322,14 @@ std::map<std::string, std::string> MIPTopicMapping::getTopicToDataRateConfigKeyM
   };
 }
 
-std::map<mscl::MipTypes::DataClass, std::string> MIPTopicMapping::getDataClassToDataRateConfigKeyMapping()
+std::map<mscl::MipTypes::DataClass, std::string> MIPTopicMapping::getDataClassToDataRateConfigKeyMapping() const
 {
   return {
     {mscl::MipTypes::DataClass::CLASS_AHRS_IMU,  "imu_data_rate"},
     {mscl::MipTypes::DataClass::CLASS_GNSS,      "gnss1_data_rate"},
     {mscl::MipTypes::DataClass::CLASS_GNSS1,     "gnss1_data_rate"},
     {mscl::MipTypes::DataClass::CLASS_GNSS2,     "gnss2_data_rate"},
+    {mscl::MipTypes::DataClass::CLASS_GNSS3,     "rtk_status_data_rate"},  // Only one RTK field right now, so just use rtk_status_data_rate
     {mscl::MipTypes::DataClass::CLASS_ESTFILTER, "filter_data_rate"},
   };
 }
@@ -351,11 +360,11 @@ void MIPTopicMapping::setChannelFieldsMapping(const std::string& topic, const Mi
       topic_info_mapping_[topic] = MIPTopicMappingInfo();
     topic_info_mapping_[topic].channel_fields = channels_to_add;
     if (channels_to_add.size() < channels.size())
-      MICROSTRAIN_WARN(node_, "Note: The device only supports some of the fields for topic %s, some of the fields in the message may be blank. Enable debug logging for more info", topic.c_str());
+      MICROSTRAIN_DEBUG(node_, "Note: The device only supports some of the fields for topic %s, some of the fields in the message may be blank. Enable debug logging for more info", topic.c_str());
   }
   else
   {
-    MICROSTRAIN_WARN(node_, "Note: The device does not support any of the fields required for topic %s, any settings to stream that topic will have no affect", topic.c_str());
+    MICROSTRAIN_DEBUG(node_, "Note: The device does not support any of the fields required for topic %s, any settings to stream that topic will have no affect", topic.c_str());
   }
 } 
 

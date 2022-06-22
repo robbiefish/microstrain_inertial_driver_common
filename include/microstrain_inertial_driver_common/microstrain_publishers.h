@@ -44,47 +44,29 @@ public:
   bool configure();
 
   /**
+   * \brief Activates the publishers. After this function is called, the publishers will be ready to use.
+   *        NOTE: This is only required to be called from ROS2.
+   * \return true if activation was successful and false if activation failed
+   */
+  bool activate();
+
+  /**
+   * \brief Deactivates the publishers. After this function is called, the publishers will no longer be able to publish, but can be reactivated.
+   *        NOTE: This is only used from ROS2.
+   * \return true if deactivation was successful and false if deactivation failed
+   */
+  bool deactivate();
+
+  /**
+   * \brief Resets the publisher pointers and frees memory. After this function is called, configure will need to be called again in order to use this class
+   * \return true if resetting was successful and false if resetting faield
+   */
+  bool reset();
+
+  /**
    * \brief Publishes device status. This is useful as it happens at a different rate than the other publishers
    */
   void publishDeviceStatus();
-
-  /**
-  // IMU Publishers
-  ImuPubType imu_pub_ = nullptr;
-  TimeReferencePubType imu_time_pub_ = nullptr;
-  MagneticFieldPubType mag_pub_ = nullptr;
-  GPSCorrelationTimestampStampedPubType gps_corr_pub_ = nullptr;
-
-  // GNSS Publishers
-  NavSatFixPubType gnss_pub_[NUM_GNSS] = { nullptr };
-  OdometryPubType gnss_odom_pub_[NUM_GNSS] = { nullptr };
-  TimeReferencePubType gnss_time_pub_[NUM_GNSS] = { nullptr };
-  GNSSAidingStatusPubType gnss_aiding_status_pub_[NUM_GNSS] = { nullptr };
-  GNSSFixInfoPubType gnss_fix_info_pub_[NUM_GNSS] = { nullptr };
-
-  // RTK Data publisher
-  RTKStatusPubType rtk_pub_ = nullptr;
-  RTKStatusPubTypeV1 rtk_pub_v1_ = nullptr;
-
-  // Filter Publishers
-  FilterStatusPubType filter_status_pub_ = nullptr;
-  FilterHeadingPubType filter_heading_pub_ = nullptr;
-  FilterHeadingStatePubType filter_heading_state_pub_ = nullptr;
-  FilterAidingMeasurementSummaryPubType filter_aiding_measurement_summary_pub_ = nullptr;
-  OdometryPubType filter_pub_ = nullptr;
-  ImuPubType filtered_imu_pub_ = nullptr;
-  OdometryPubType filter_relative_pos_pub_ = nullptr;
-  GNSSDualAntennaStatusPubType gnss_dual_antenna_status_pub_ = nullptr;
-
-  // Device Status Publisher
-  StatusPubType device_status_pub_;
-
-  // NMEA Sentence Publisher
-  NMEASentencePubType nmea_sentence_pub_;
-
-  // Transform Broadcaster
-  TransformBroadcasterType transform_broadcaster_ = nullptr;
-  */
 
   // IMU Publishers
   MIPPublisherPool<ImuPubType, ImuMsg> imu_pub_map_;
@@ -120,7 +102,7 @@ public:
   MIPPublisherPool<NMEASentencePubType, NMEASentenceMsg> nmea_sentence_pub_map_;
 
   // Transform Broadcaster
-  MIPPublisherPool<TransformBroadcasterType, TransformStampedMsg> relative_transform_pub_map_;
+  TransformBroadcasterType transform_broadcaster_ = nullptr;
 
 private:
   RosNodeType* node_;

@@ -15,7 +15,7 @@
 # aux_port is only available for the GQ7 and is only needed when streaming RTCM corrections to the device from ROS, or if you want to publish NMEA sentences from this node
 port        : "/dev/ttyACM0"
 aux_port    : "/dev/ttyACM1"
-baudrate    : 115200
+baudrate    : 921600
 debug       : False
 diagnostics : False
 
@@ -406,8 +406,7 @@ filter_pps_source : 1
 # The event system can be used to trigger an "action" based on a "trigger".
 # Available trigger types (case insensitive): GPIO, THRESHOLD
 # Available action types (case insensitive): GPIO, MESSAGE
-#    trigger.type = 
-event_setup : True
+event_setup : False
 event_config : |  # Please note that this '|'' symbol MUST be here or ROS will attempt to parse the yaml string below which will cause the node to crash
   - trigger:
       type: "GPIO"

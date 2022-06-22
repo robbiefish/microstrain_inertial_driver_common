@@ -121,8 +121,7 @@ void MicrostrainParser::parseAuxString(const std::string& aux_string)
     nmea_sentence_msg_.header.stamp = ros_time_now(node_);
     nmea_sentence_msg_.header.frame_id = config_->nmea_frame_id_;
     nmea_sentence_msg_.sentence = nmea_sentence;
-    if (publishers_->nmea_sentence_pub_ != nullptr)
-      publishers_->nmea_sentence_pub_->publish(nmea_sentence_msg_);
+    publishers_->nmea_sentence_pub_map_.publish(nmea_sentence_msg_);
 
     // Remove everything from the beginning of the string to the end of the NMEA sentence as it should all be parsed now
     aux_string_.erase(0, nmea_end_index + 1);
@@ -165,7 +164,7 @@ void MicrostrainParser::parseIMUPacket(const mscl::MipDataPacket& packet)
       config_->time_reference_msg_.header.stamp = to_ros_time(packet.collectedTimestamp().nanoseconds());
       config_->time_reference_msg_.time_ref = to_ros_time(packet.shared().referenceTime());
       config_->time_reference_msg_.source = "CV7";
-      config_->time_reference_pub_->publish(config_->time_reference_msg_);
+      config_->time_reference_pub_map_.publish(config_->time_reference_msg_);
       return;
     }
   }
@@ -364,17 +363,17 @@ void MicrostrainParser::parseIMUPacket(const mscl::MipDataPacket& packet)
   }
 
   // Publish
-  if (publishers_->imu_pub_ != nullptr && (has_accel || has_gyro || has_quat))
-    publishers_->imu_pub_->publish(imu_msg_);
+  if ((has_accel || has_gyro || has_quat))
+    publishers_->imu_pub_map_.publish(imu_msg_);
 
-  if (publishers_->imu_time_pub_ != nullptr && has_reference_time)
-    publishers_->imu_time_pub_->publish(imu_time_msg_);
+  if (has_reference_time)
+    publishers_->imu_time_pub_map_.publish(imu_time_msg_);
 
-  if (publishers_->mag_pub_ != nullptr && has_mag)
-    publishers_->mag_pub_->publish(mag_msg_);
+  if (has_mag)
+    publishers_->mag_pub_map_.publish(mag_msg_);
 
-  if (publishers_->gps_corr_pub_ != nullptr && has_gps_corr)
-    publishers_->gps_corr_pub_->publish(gps_corr_msg_);
+  if (has_gps_corr)
+    publishers_->gps_corr_pub_map_.publish(gps_corr_msg_);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1052,38 +1051,38 @@ void MicrostrainParser::parseFilterPacket(const mscl::MipDataPacket& packet)
   }
 
   // Publish
-  if (publishers_->filter_status_pub_ != nullptr && filter_status_received)
-    publishers_->filter_status_pub_->publish(filter_status_msg_);
+  if (filter_status_received)
+    publishers_->filter_status_pub_map_.publish(filter_status_msg_);
 
-  if (publishers_->filter_heading_pub_ != nullptr && filter_heading_received)
-    publishers_->filter_heading_pub_->publish(filter_heading_msg_);
+  if (filter_heading_received)
+    publishers_->filter_heading_pub_map_.publish(filter_heading_msg_);
 
-  if (publishers_->filter_heading_state_pub_ != nullptr && filter_heading_state_received)
-    publishers_->filter_heading_state_pub_->publish(filter_heading_state_msg_);
+  if (filter_heading_state_received)
+    publishers_->filter_heading_state_pub_map_.publish(filter_heading_state_msg_);
 
-  if (publishers_->filter_pub_ != nullptr && filter_odom_received)
-    publishers_->filter_pub_->publish(filter_msg_);
+  if (filter_odom_received)
+    publishers_->filter_pub_map_.publish(filter_msg_);
 
-  if (publishers_->filtered_imu_pub_ != nullptr && filter_imu_received)
-    publishers_->filtered_imu_pub_->publish(filtered_imu_msg_);
+  if (filter_imu_received)
+    publishers_->filtered_imu_pub_map_.publish(filtered_imu_msg_);
 
-  if (publishers_->filter_relative_pos_pub_ != nullptr && filter_relative_odom_received)
-    publishers_->filter_relative_pos_pub_->publish(filter_relative_pos_msg_);
+  if (filter_relative_odom_received)
+    publishers_->filter_relative_pos_pub_map_.publish(filter_relative_pos_msg_);
 
   if (publishers_->transform_broadcaster_ != nullptr && relative_transform_received)
     publishers_->transform_broadcaster_->sendTransform(filter_transform_msg_);
 
   for (int i = 0; i < NUM_GNSS; i++)
   {
-    if (publishers_->gnss_aiding_status_pub_[i] != nullptr && gnss_aiding_status_received[i])
-      publishers_->gnss_aiding_status_pub_[i]->publish(gnss_aiding_status_msg_[i]);
+    if (gnss_aiding_status_received[i])
+      publishers_->gnss_aiding_status_pub_map_[i].publish(gnss_aiding_status_msg_[i]);
   }
 
-  if (publishers_->gnss_dual_antenna_status_pub_ != nullptr && gnss_dual_antenna_status_received)
-    publishers_->gnss_dual_antenna_status_pub_->publish(gnss_dual_antenna_status_msg_);
+  if (gnss_dual_antenna_status_received)
+    publishers_->gnss_dual_antenna_status_pub_map_.publish(gnss_dual_antenna_status_msg_);
 
-  if (publishers_->filter_aiding_measurement_summary_pub_ != nullptr && filter_aiding_measurement_summary_received)
-    publishers_->filter_aiding_measurement_summary_pub_->publish(filter_aiding_measurement_summary_msg_);
+  if (filter_aiding_measurement_summary_received)
+    publishers_->filter_aiding_measurement_summary_pub_map_.publish(filter_aiding_measurement_summary_msg_);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1254,17 +1253,17 @@ void MicrostrainParser::parseGNSSPacket(const mscl::MipDataPacket& packet, int g
   }
 
   // Publish
-  if (publishers_->gnss_pub_[gnss_id] != nullptr && has_nav_sat_fix)
-    publishers_->gnss_pub_[gnss_id]->publish(gnss_msg_[gnss_id]);
+  if (has_nav_sat_fix)
+    publishers_->gnss_pub_map_[gnss_id].publish(gnss_msg_[gnss_id]);
 
-  if (publishers_->gnss_odom_pub_[gnss_id] != nullptr && has_odom)
-    publishers_->gnss_odom_pub_[gnss_id]->publish(gnss_odom_msg_[gnss_id]);
+  if (has_odom)
+    publishers_->gnss_odom_pub_map_[gnss_id].publish(gnss_odom_msg_[gnss_id]);
 
-  if (publishers_->gnss_time_pub_[gnss_id] != nullptr && time_valid)
-    publishers_->gnss_time_pub_[gnss_id]->publish(gnss_time_msg_[gnss_id]);
+  if (time_valid)
+    publishers_->gnss_time_pub_map_[gnss_id].publish(gnss_time_msg_[gnss_id]);
 
-  if (publishers_->gnss_fix_info_pub_[gnss_id] != nullptr && has_fix_info)
-    publishers_->gnss_fix_info_pub_[gnss_id]->publish(gnss_fix_info_msg_[gnss_id]);
+  if (has_fix_info)
+    publishers_->gnss_fix_info_pub_map_[gnss_id].publish(gnss_fix_info_msg_[gnss_id]);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1390,15 +1389,13 @@ void MicrostrainParser::parseRTKPacket(const mscl::MipDataPacket& packet)
         rtk_msg_v1_.galileo_correction_latency = rtk_msg_.galileo_correction_latency;
         rtk_msg_v1_.beidou_correction_latency = rtk_msg_.beidou_correction_latency;
 
-        if (publishers_->rtk_pub_v1_ != nullptr)
-          publishers_->rtk_pub_v1_->publish(rtk_msg_v1_);
+        publishers_->rtk_pub_map_v1_.publish(rtk_msg_v1_);
         break;
       }
       // v2
       default:
       {
-        if (publishers_->rtk_pub_ != nullptr)
-          publishers_->rtk_pub_->publish(rtk_msg_);
+        publishers_->rtk_pub_map_.publish(rtk_msg_);
         break;
       }
     }

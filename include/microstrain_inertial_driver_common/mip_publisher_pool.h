@@ -2,6 +2,7 @@
 #define MICROSTRAIN_INERTIAL_DRIVER_COMMON_MIP_PUBLISHER_POOL_H_
 
 #include "microstrain_inertial_driver_common/microstrain_defs.h"
+#include "microstrain_inertial_driver_common/mip_topic_mapping.h"
 
 namespace microstrain
 {
@@ -12,18 +13,28 @@ class MIPPublisherPool
 {
  public:
   MIPPublisherPool() = default;
-  MIPPublisherPool(RosNodeType* node) : node_(node) {}
 
-  void configurePublisher(const std::string& topic, const uint32_t queue_size = 100)
+  void configurePublisher(RosNodeType* node, const MIPTopicMapping& topic_mapping, const std::string& topic, const uint32_t queue_size = 100)
   {
-    publisher_ = create_publisher<MessageType>(node_, topic, queue_size);
+    if (topic_mapping.shouldPublish(topic))
+    {
+      MICROSTRAIN_INFO(node, "Publishing topic %s at %d hz", topic.c_str(), topic_mapping.getDataRate(topic));
+      publisher_ = create_publisher<MessageType>(node, topic, queue_size);
+    }
+    else
+    {
+      if (topic_mapping.canPublish(topic))
+        MICROSTRAIN_INFO(node, "Not publishing topic %s because the data rate was set to 0", topic.c_str());
+      else
+        MICROSTRAIN_INFO(node, "Not publishing topic %s because the device does not support it", topic.c_str());
+    }
   }
 
-  void configureEventPublisher(const std::string& topic, const uint32_t queue_size, const uint8_t event_id)
+  void configureEventPublisher(RosNodeType* node, const std::string& topic, const uint32_t queue_size, const uint8_t event_id)
   {
     if (event_publisher_map_.find(topic) != event_publisher_map_.end())
-      MICROSTRAIN_WARN(node_, "Overriding event %u publisher for topic %s", event_id, topic.c_str());
-    event_publisher_map_[event_id] = create_publisher<MessageType>(node_, topic, queue_size);
+      MICROSTRAIN_WARN(node, "Overriding event %u publisher for topic %s", event_id, topic.c_str());
+    event_publisher_map_[event_id] = create_publisher<MessageType>(node, topic, queue_size);
   }
 
   void activate()
@@ -60,15 +71,9 @@ class MIPPublisherPool
     {
       event_publisher_map_[event_id]->publish(message);
     }
-    else
-    {
-      MICROSTRAIN_ERROR(node_, "No publisher found for event ID %u", event_id);
-    }
   }
 
  private:
-  RosNodeType* node_;
-
   PublisherType publisher_ = nullptr;
   std::map<uint8_t, PublisherType> event_publisher_map_;
 };

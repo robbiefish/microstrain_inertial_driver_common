@@ -145,19 +145,19 @@ class MIPTopicMapping
    * \brief Gets the complete topic to channel fields mapping. Will return all channel fields regardless of what device supports.
    * \return Map where the key is the topic and the value is the MIP channel fields associated with that topic
    */
-  std::map<std::string, MipChannelFields> getTopicToChannelFieldsMapping();
+  std::map<std::string, MipChannelFields> getTopicToChannelFieldsMapping() const;
 
   /**
    * \brief Gets a map of topics to data rate configuration keys
    * \return Map where the key is the topic and the value is the config parameter used to configure the topic data rate
    */
-  std::map<std::string, std::string> getTopicToDataRateConfigKeyMapping();
+  std::map<std::string, std::string> getTopicToDataRateConfigKeyMapping() const;
 
   /**
    * \brief Gets a map of data classes to data rate configuration keys
    * \return Map where the key is the data class and the value is the config parameter used to configure all topics associted with the data rate
    */
-  std::map<mscl::MipTypes::DataClass, std::string> getDataClassToDataRateConfigKeyMapping();
+  std::map<mscl::MipTypes::DataClass, std::string> getDataClassToDataRateConfigKeyMapping() const;
 
   /**
    * \brief Helper function used when initializing this class to check if the channels are supported by the device before mapping the channels to the topic
