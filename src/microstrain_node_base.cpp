@@ -49,7 +49,6 @@ bool MicrostrainNodeBase::initialize(RosNodeType* init_node)
 {
   node_ = init_node;
   config_ = MicrostrainConfig(node_);
-  publishers_ = MicrostrainPublishers(node_, &config_);
   subscribers_ = MicrostrainSubscribers(node_, &config_);
   services_ = MicrostrainServices(node_, &config_);
   parser_ = MicrostrainParser(node_, &config_, &publishers_);
@@ -68,7 +67,7 @@ bool MicrostrainNodeBase::configure(RosNodeType* config_node)
     return false;
   }
   MICROSTRAIN_DEBUG(node_, "Configuring Publishers");
-  if (!publishers_.configure())
+  if (!publishers_.configure(node_, config_.topic_mapping_))
   {
     MICROSTRAIN_ERROR(node_, "Failed to configure publishers");
     return false;

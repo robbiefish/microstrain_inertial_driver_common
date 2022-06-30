@@ -17,49 +17,112 @@
 
 namespace microstrain
 {
-MicrostrainPublishers::MicrostrainPublishers(RosNodeType* node, MicrostrainConfig* config)
-  : node_(node), config_(config)
-{
-}
-
-bool MicrostrainPublishers::configure()
+bool MicrostrainPublishers::configure(RosNodeType* node, const MIPTopicMapping& topic_mapping)
 {
   // TODO(robbiefish): Rename some of these variables to be consistent
   // IMU publishers
-  imu_pub_map_.configurePublisher(node_, config_->topic_mapping_, IMU_DATA_TOPIC);
-  imu_time_pub_map_.configurePublisher(node_, config_->topic_mapping_, IMU_INTERNAL_TIME_REF_TOPIC);
-  mag_pub_map_.configurePublisher(node_, config_->topic_mapping_, IMU_MAG_TOPIC);
-  gps_corr_pub_map_.configurePublisher(node_, config_->topic_mapping_, IMU_GPS_CORR_TOPIC);
+  imu_pub_map_.configurePublisher(node, topic_mapping, IMU_DATA_TOPIC);
+  imu_time_pub_map_.configurePublisher(node, topic_mapping, IMU_INTERNAL_TIME_REF_TOPIC);
+  mag_pub_map_.configurePublisher(node, topic_mapping, IMU_MAG_TOPIC);
+  gps_corr_pub_map_.configurePublisher(node, topic_mapping, IMU_GPS_CORR_TOPIC);
 
   // GNSS/GNSS1 publishers
-  gnss_pub_map_[GNSS1_ID].configurePublisher(node_, config_->topic_mapping_, GNSS1_NAVSATFIX_TOPIC);
-  gnss_odom_pub_map_[GNSS1_ID].configurePublisher(node_, config_->topic_mapping_, GNSS1_ODOM_TOPIC);
-  gnss_time_pub_map_[GNSS1_ID].configurePublisher(node_, config_->topic_mapping_, GNSS1_TIME_REF_TOPIC);
-  gnss_fix_info_pub_map_[GNSS1_ID].configurePublisher(node_, config_->topic_mapping_, GNSS1_FIX_INFO_TOPIC);
-  gnss_aiding_status_pub_map_[GNSS1_ID].configurePublisher(node_, config_->topic_mapping_, GNSS1_AIDING_STATUS_TOPIC);
+  gnss_pub_map_[GNSS1_ID].configurePublisher(node, topic_mapping, GNSS1_NAVSATFIX_TOPIC);
+  gnss_odom_pub_map_[GNSS1_ID].configurePublisher(node, topic_mapping, GNSS1_ODOM_TOPIC);
+  gnss_time_pub_map_[GNSS1_ID].configurePublisher(node, topic_mapping, GNSS1_TIME_REF_TOPIC);
+  gnss_fix_info_pub_map_[GNSS1_ID].configurePublisher(node, topic_mapping, GNSS1_FIX_INFO_TOPIC);
+  gnss_aiding_status_pub_map_[GNSS1_ID].configurePublisher(node, topic_mapping, GNSS1_AIDING_STATUS_TOPIC);
 
   // GNSS2 publishers
-  gnss_pub_map_[GNSS2_ID].configurePublisher(node_, config_->topic_mapping_, GNSS2_NAVSATFIX_TOPIC);
-  gnss_odom_pub_map_[GNSS2_ID].configurePublisher(node_, config_->topic_mapping_, GNSS2_ODOM_TOPIC);
-  gnss_time_pub_map_[GNSS2_ID].configurePublisher(node_, config_->topic_mapping_, GNSS2_TIME_REF_TOPIC);
-  gnss_fix_info_pub_map_[GNSS2_ID].configurePublisher(node_, config_->topic_mapping_, GNSS2_FIX_INFO_TOPIC);
-  gnss_aiding_status_pub_map_[GNSS2_ID].configurePublisher(node_, config_->topic_mapping_, GNSS2_AIDING_STATUS_TOPIC);
+  gnss_pub_map_[GNSS2_ID].configurePublisher(node, topic_mapping, GNSS2_NAVSATFIX_TOPIC);
+  gnss_odom_pub_map_[GNSS2_ID].configurePublisher(node, topic_mapping, GNSS2_ODOM_TOPIC);
+  gnss_time_pub_map_[GNSS2_ID].configurePublisher(node, topic_mapping, GNSS2_TIME_REF_TOPIC);
+  gnss_fix_info_pub_map_[GNSS2_ID].configurePublisher(node, topic_mapping, GNSS2_FIX_INFO_TOPIC);
+  gnss_aiding_status_pub_map_[GNSS2_ID].configurePublisher(node, topic_mapping, GNSS2_AIDING_STATUS_TOPIC);
 
   // RTK publishers
-  rtk_pub_map_.configurePublisher(node_, config_->topic_mapping_, RTK_STATUS_TOPIC);
+  rtk_pub_map_.configurePublisher(node, topic_mapping, RTK_STATUS_TOPIC);
 
   // Filter publishers
-  filter_status_pub_map_.configurePublisher(node_, config_->topic_mapping_, FILTER_STATUS_TOPIC);
-  filter_heading_pub_map_.configurePublisher(node_, config_->topic_mapping_, FILTER_HEADING_TOPIC);
-  filter_heading_state_pub_map_.configurePublisher(node_, config_->topic_mapping_, FILTER_HEADING_STATE_TOPIC);
-  filter_pub_map_.configurePublisher(node_, config_->topic_mapping_, FILTER_ODOM_TOPIC);
-  filtered_imu_pub_map_.configurePublisher(node_, config_->topic_mapping_, FILTER_IMU_DATA_TOPIC);
-  filter_relative_pos_pub_map_.configurePublisher(node_, config_->topic_mapping_, FILTER_RELATIVE_ODOM_TOPIC);
-  if (config_->topic_mapping_.shouldPublish(FILTER_RELATIVE_ODOM_TOPIC) && transform_broadcaster_ == nullptr)
-    transform_broadcaster_ = create_transform_broadcaster(node_);
-  gnss_dual_antenna_status_pub_map_.configurePublisher(node_, config_->topic_mapping_, FILTER_DUAL_ANTENNA_STATUS_TOPIC);
-  filter_aiding_measurement_summary_pub_map_.configurePublisher(node_, config_->topic_mapping_, FILTER_AIDING_SUMMARY_TOPIC);
+  filter_status_pub_map_.configurePublisher(node, topic_mapping, FILTER_STATUS_TOPIC);
+  filter_heading_pub_map_.configurePublisher(node, topic_mapping, FILTER_HEADING_TOPIC);
+  filter_heading_state_pub_map_.configurePublisher(node, topic_mapping, FILTER_HEADING_STATE_TOPIC);
+  filter_pub_map_.configurePublisher(node, topic_mapping, FILTER_ODOM_TOPIC);
+  filtered_imu_pub_map_.configurePublisher(node, topic_mapping, FILTER_IMU_DATA_TOPIC);
+  filter_relative_pos_pub_map_.configurePublisher(node, topic_mapping, FILTER_RELATIVE_ODOM_TOPIC);
+  if (topic_mapping.shouldPublish(FILTER_RELATIVE_ODOM_TOPIC) && transform_broadcaster_ == nullptr)
+    transform_broadcaster_ = create_transform_broadcaster(node);
+  gnss_dual_antenna_status_pub_map_.configurePublisher(node, topic_mapping, FILTER_DUAL_ANTENNA_STATUS_TOPIC);
+  filter_aiding_measurement_summary_pub_map_.configurePublisher(node, topic_mapping, FILTER_AIDING_SUMMARY_TOPIC);
 
+  return true;
+}
+
+bool MicrostrainPublishers::configureEventPublisher(RosNodeType* node, const std::string& topic, const std::string& data_topic, const uint8_t event_id)
+{
+  /*
+  // IMU events
+  if (data_topic == IMU_DATA_TOPIC)
+    imu_pub_map_.configureEventPublisher(node, topic, event_id);
+  else if (data_topic == IMU_INTERNAL_TIME_REF_TOPIC)
+    imu_time_pub_map_.configureEventPublisher(node, topic, event_id);
+  else if (data_topic == IMU_MAG_TOPIC)
+    mag_pub_map_.configureEventPublisher(node, topic, event_id);
+  else if (data_topic == IMU_GPS_CORR_TOPIC)
+    gps_corr_pub_map_.configureEventPublisher(node, topic, event_id);
+  
+  // GNSS/GNSS1 events
+  else if (data_topic == GNSS1_NAVSATFIX_TOPIC)
+    gnss_pub_map_[GNSS1_ID].configureEventPublisher(node, topic, event_id);
+  else if (data_topic == GNSS1_ODOM_TOPIC)
+    gnss_odom_pub_map_[GNSS1_ID].configureEventPublisher(node, topic, event_id);
+  else if (data_topic == GNSS1_TIME_REF_TOPIC)
+    gnss_time_pub_map_[GNSS1_ID].configureEventPublisher(node, topic, event_id);
+  else if (data_topic == GNSS1_FIX_INFO_TOPIC)
+    gnss_fix_info_pub_map_[GNSS1_ID].configureEventPublisher(node, topic, event_id);
+  else if (data_topic == GNSS1_AIDING_STATUS_TOPIC)
+    gnss_aiding_status_pub_map_[GNSS1_ID].configureEventPublisher(node, topic, event_id);
+  
+  // GNSS2 events
+  else if (data_topic == GNSS2_NAVSATFIX_TOPIC)
+    gnss_pub_map_[GNSS2_ID].configureEventPublisher(node, topic, event_id);
+  else if (data_topic == GNSS2_ODOM_TOPIC)
+    gnss_odom_pub_map_[GNSS2_ID].configureEventPublisher(node, topic, event_id);
+  else if (data_topic == GNSS2_TIME_REF_TOPIC)
+    gnss_time_pub_map_[GNSS2_ID].configureEventPublisher(node, topic, event_id);
+  else if (data_topic == GNSS2_FIX_INFO_TOPIC)
+    gnss_fix_info_pub_map_[GNSS2_ID].configureEventPublisher(node, topic, event_id);
+  else if (data_topic == GNSS2_AIDING_STATUS_TOPIC)
+    gnss_aiding_status_pub_map_[GNSS2_ID].configureEventPublisher(node, topic, event_id);
+  
+  // RTK events
+  else if (data_topic == RTK_STATUS_TOPIC)
+    rtk_pub_map_.configureEventPublisher(node, topic, event_id);
+  else if (data_topic == RTK_STATUS_V1_TOPIC)
+    rtk_pub_map_v1_.configureEventPublisher(node, topic, event_id);
+  
+  // Filter events
+  else if (data_topic == FILTER_STATUS_TOPIC)
+    filter_status_pub_map_.configureEventPublisher(node, topic, event_id);
+  else if (data_topic == FILTER_HEADING_TOPIC)
+    filter_heading_pub_map_.configureEventPublisher(node, topic, event_id);
+  else if (data_topic == FILTER_HEADING_STATE_TOPIC)
+    filter_heading_state_pub_map_.configureEventPublisher(node, topic, event_id);
+  else if (data_topic == FILTER_ODOM_TOPIC)
+    filter_pub_map_.configureEventPublisher(node, topic, event_id);
+  else if (data_topic == FILTER_IMU_DATA_TOPIC)
+    filtered_imu_pub_map_.configureEventPublisher(node, topic, event_id);
+  else if (data_topic == FILTER_RELATIVE_ODOM_TOPIC)
+    filter_relative_pos_pub_map_.configureEventPublisher(node, topic, event_id);
+  else if (data_topic == FILTER_DUAL_ANTENNA_STATUS_TOPIC)
+    gnss_dual_antenna_status_pub_map_.configureEventPublisher(node, topic, event_id);
+  else if (data_topic == FILTER_AIDING_SUMMARY_TOPIC)
+    filter_aiding_measurement_summary_pub_map_.configureEventPublisher(node, topic, event_id);
+
+  // If the event is not valid, return an error
+  else
+    return false;
+  */
   return true;
 }
 

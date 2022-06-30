@@ -13,7 +13,7 @@
 
 #include "microstrain_inertial_driver_common/microstrain_defs.h"
 #include "microstrain_inertial_driver_common/microstrain_ros_funcs.h"
-#include "microstrain_inertial_driver_common/microstrain_config.h"
+#include "microstrain_inertial_driver_common/mip_topic_mapping.h"
 #include "microstrain_inertial_driver_common/mip_publisher_pool.h"
 
 namespace microstrain
@@ -31,17 +31,19 @@ public:
   MicrostrainPublishers() = default;
 
   /**
-   * \brief Constructs this class with a reference to the node, and a config object
-   * \param node  Reference to a node that will be saved to this class and used to log and interact with ROS
-   * \param config Reference to the config object that will be saved to this class and used to determine whether or not to publish
-   */
-  MicrostrainPublishers(RosNodeType* node, MicrostrainConfig* config);
-
-  /**
    * \brief Configures the publishers. After this function is called, the publishers will be created, but (ROS2 only) will not be activated
    * \return true if configuration was successful and false if configuration failed
    */
-  bool configure();
+  bool configure(RosNodeType* node, const MIPTopicMapping& topic_mapping);
+
+  /**
+   * \brief Configures a publisher for an event ID. After this function is called, the publisher for the event will be created, but (ROS2 only) will not be activated
+   * \param  topic The name of the topic to publish the even on
+   * \param  data_topic The topic associated with the data that should be published
+   * \param  event_id  The ID of the event that should be setup
+   * \return True if the configuration was successful, false if otherwise
+   */
+  bool configureEventPublisher(RosNodeType* node, const std::string& topic, const std::string& data_topic, const uint8_t event_id);
 
   /**
    * \brief Activates the publishers. After this function is called, the publishers will be ready to use.
@@ -103,10 +105,6 @@ public:
 
   // Transform Broadcaster
   TransformBroadcasterType transform_broadcaster_ = nullptr;
-
-private:
-  RosNodeType* node_;
-  MicrostrainConfig* config_;
 };  // struct MicrostrainPublishers
 
 }  // namespace microstrain

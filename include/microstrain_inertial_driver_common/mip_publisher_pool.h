@@ -30,10 +30,12 @@ class MIPPublisherPool
     }
   }
 
-  void configureEventPublisher(RosNodeType* node, const std::string& topic, const uint32_t queue_size, const uint8_t event_id)
+  void configureEventPublisher(RosNodeType* node, const std::string& topic, const uint8_t event_id, const uint32_t queue_size = 100)
   {
-    if (event_publisher_map_.find(topic) != event_publisher_map_.end())
-      MICROSTRAIN_WARN(node, "Overriding event %u publisher for topic %s", event_id, topic.c_str());
+    if (event_publisher_map_.find(event_id) != event_publisher_map_.end())
+      MICROSTRAIN_WARN(node, "Overriding event %d publisher for topic %s", static_cast<int32_t>(event_id), topic.c_str());
+    else
+      MICROSTRAIN_INFO(node, "Publishing to topic %s on event %d", topic.c_str(), static_cast<int32_t>(event_id));
     event_publisher_map_[event_id] = create_publisher<MessageType>(node, topic, queue_size);
   }
 

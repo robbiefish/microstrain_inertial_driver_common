@@ -410,11 +410,14 @@ event_setup : False
 event_config : |  # Please note that this '|'' symbol MUST be here or ROS will attempt to parse the yaml string below which will cause the node to crash
   - trigger:
       type: "GPIO"
+      id: 1
       config:
         pin: 1
         mode: "EDGE"
     action:
       type: "MESSAGE"
+      id: 1
+      trigger_id: 1
       config:
         topic: "/cv7/event/data"
         message_type: "imu/data"

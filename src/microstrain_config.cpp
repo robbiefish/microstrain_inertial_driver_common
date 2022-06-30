@@ -1006,8 +1006,14 @@ bool MicrostrainConfig::configureSensor2vehicle(RosNodeType* node)
 
 bool MicrostrainConfig::configureEvents(RosNodeType* node)
 {
-  // Read the event config and attempt to parse it as JSON
+  // Return early if event_setup is false
+  bool event_setup;
   std::string event_config;
+  get_param<bool>(node, "event_setup", event_setup, false);
+  if (!event_setup)
+    return true;
+
+  // Read the event config and attempt to parse it as YAML
   get_param<std::string>(node, "event_config", event_config, "");
   YAML::Node event_config_yml;
   try
