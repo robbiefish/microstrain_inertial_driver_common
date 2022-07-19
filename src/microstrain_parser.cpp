@@ -190,6 +190,22 @@ void MicrostrainParser::parseIMUPacket(const mscl::MipDataPacket& packet)
     auto point = *point_iter;
     switch (point.field())
     {
+      // External timestamp
+      case mscl::MipTypes::CH_FIELD_SENSOR_SHARED_EXTERNAL_TIMESTAMP:
+      {
+        // By default, the nanoseconds function will attempt to conver the nanoseconds from the GPS epoch to the UNIX epoch.
+        // The purpose of this weird cast call is to prevent the nanoseconds function from attempting to convert the nanoseconds to UTC time.
+        // In the future the nanoseconds function may change, but this epoch cast should keep this example working for the forseeable future.
+        // This note is mostly intended for MicroStrain employees who might come back and look at this and wonder about the purpose of this cast.
+        const auto& epoch = static_cast<mscl::Timestamp::Epoch>(-1);
+
+        // Extract the nanoseconds from the timestamp object
+        const uint64_t timestamp = point.as_Timestamp().nanoseconds(epoch);
+
+        MICROSTRAIN_INFO(node_, "External timestamp nanoseconds: %lu", timestamp);
+        break;
+      }
+
       // Scaled Accel
       case mscl::MipTypes::CH_FIELD_SENSOR_SCALED_ACCEL_VEC:
       {

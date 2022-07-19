@@ -553,6 +553,9 @@ bool MicrostrainConfig::configureIMUDataRates()
     mscl::MipTypes::ChannelField::CH_FIELD_SENSOR_SCALED_ACCEL_VEC,
     mscl::MipTypes::ChannelField::CH_FIELD_SENSOR_SCALED_GYRO_VEC,
     mscl::MipTypes::ChannelField::CH_FIELD_SENSOR_ORIENTATION_QUATERNION,
+
+    // Add the External timestamp field
+    mscl::MipTypes::ChannelField::CH_FIELD_SENSOR_SHARED_EXTERNAL_TIMESTAMP,
   };
   getSupportedMipChannels(mscl::MipTypes::DataClass::CLASS_AHRS_IMU, imu_raw_fields, imu_raw_data_rate_, &channels_to_stream);
 
