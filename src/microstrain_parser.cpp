@@ -1392,6 +1392,13 @@ void MicrostrainParser::parseSystemPacket(const mscl::MipDataPacket& packet) {
   // Get the list of data elements
   const mscl::MipDataPoints& points = packet.data();
 
+  // Keep track of whether we actually received the message
+  bool pps_time_sync_received = false;
+
+  // TODO: This should probably be replaced with a messsage, but just print for now
+  bool pps_valid;
+  uint8_t last_pps;
+
   // Loop over data elements and map them
   for (mscl::MipDataPoint point : points)
   {
@@ -1399,10 +1406,24 @@ void MicrostrainParser::parseSystemPacket(const mscl::MipDataPacket& packet) {
     {
       // RTK Correction Status
       case mscl::MipTypes::CH_FIELD_SYSTEM_TIME_SYNC_STATUS:
-        MICROSTRAIN_INFO(node_, "Received System time sync status");
+      {
+        pps_time_sync_received = true;
+        if (point.qualifier() == mscl::MipTypes::ChannelQualifier::CH_PPS_VALID)
+        {
+          pps_valid = point.as_bool();
+        }
+        if (point.qualifier() == mscl::MipTypes::ChannelQualifier::CH_LAST_PPS)
+        {
+          last_pps = point.as_uint8();
+        }
         break;
+      }
     }
   }
+
+  // TODO: This should probably publish a message, but just print for now
+  if (pps_time_sync_received)
+    MICROSTRAIN_INFO(node_, "PPS valid: %d, Last PPS: %u", pps_valid, last_pps);
 }
 
 void MicrostrainParser::printPacketStats()
