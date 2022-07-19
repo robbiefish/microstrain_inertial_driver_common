@@ -139,6 +139,8 @@ public:
    */
   bool configureFilterDataRates();
 
+  bool configureSystemDataRates();
+
   /**
    * \brief Configures Sensor 2 Vehicle settings on the inertial device
    * \param node  The ROS node that contains configuration information. For ROS1 this is the private node handle ("~")
@@ -156,6 +158,7 @@ public:
   bool supports_rtk_;
   bool supports_filter_;
   bool supports_imu_;
+  bool supports_system_;
 
   // Info for converting to the ENU frame
   bool use_enu_frame_;

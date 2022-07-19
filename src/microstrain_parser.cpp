@@ -58,6 +58,11 @@ void MicrostrainParser::parseMIPPacket(const mscl::MipDataPacket& packet)
       parseRTKPacket(packet);
       printPacketStats();
       break;
+    
+    case mscl::MipTypes::DataClass::CLASS_SYSTEM:
+      parseSystemPacket(packet);
+      printPacketStats();
+      break;
 
     default:
       break;
@@ -1376,6 +1381,26 @@ void MicrostrainParser::parseRTKPacket(const mscl::MipDataPacket& packet)
           publishers_->rtk_pub_->publish(publishers_->rtk_msg_);
         break;
       }
+    }
+  }
+}
+
+void MicrostrainParser::parseSystemPacket(const mscl::MipDataPacket& packet) {
+  // Handle time
+  const RosTimeType packet_time = getPacketTimestamp(packet);
+
+  // Get the list of data elements
+  const mscl::MipDataPoints& points = packet.data();
+
+  // Loop over data elements and map them
+  for (mscl::MipDataPoint point : points)
+  {
+    switch (point.field())
+    {
+      // RTK Correction Status
+      case mscl::MipTypes::CH_FIELD_SYSTEM_TIME_SYNC_STATUS:
+        MICROSTRAIN_INFO(node_, "Received System time sync status");
+        break;
     }
   }
 }

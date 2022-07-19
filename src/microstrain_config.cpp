@@ -264,6 +264,7 @@ bool MicrostrainConfig::connectDevice(RosNodeType* node)
     supports_rtk_ = inertial_device_->features().supportsCategory(mscl::MipTypes::DataClass::CLASS_GNSS3);
     supports_filter_ = inertial_device_->features().supportsCategory(mscl::MipTypes::DataClass::CLASS_ESTFILTER);
     supports_imu_ = inertial_device_->features().supportsCategory(mscl::MipTypes::DataClass::CLASS_AHRS_IMU);
+    supports_system_ = inertial_device_->features().supportsCategory(mscl::MipTypes::DataClass::CLASS_SYSTEM);
 
     // Connect the aux port if we were asked to stream RTCM corrections
     if (supports_rtk_ && (subscribe_rtcm_ || publish_nmea_))
@@ -357,6 +358,10 @@ bool MicrostrainConfig::setupDevice(RosNodeType* node)
       if (!configureFilterDataRates())
         return false;
   }
+
+  if (supports_system_)
+    if (!configureSystemDataRates())
+      return false;
 
   // Sensor2Vehicle setup
   if (!configureSensor2vehicle(node))
@@ -1131,6 +1136,32 @@ bool MicrostrainConfig::configureFilterDataRates()
   catch (const mscl::Error& e)
   {
     MICROSTRAIN_ERROR(node_, "Unable to set filter data to stream.");
+    MICROSTRAIN_ERROR(node_, "  Error: %s", e.what());
+    return false;
+  }
+  return true;
+}
+
+bool MicrostrainConfig::configureSystemDataRates()
+{
+  mscl::MipChannels channels_to_stream;
+
+  // Streaming for /nav/status
+  mscl::MipTypes::MipChannelFields system_fields
+  {
+    mscl::MipTypes::ChannelField::CH_FIELD_SYSTEM_TIME_SYNC_STATUS,
+  };
+  getSupportedMipChannels(mscl::MipTypes::DataClass::CLASS_SYSTEM, system_fields, 1, &channels_to_stream);
+
+  // Enable the data stream
+  try
+  {
+    inertial_device_->setActiveChannelFields(mscl::MipTypes::DataClass::CLASS_SYSTEM, channels_to_stream);
+    inertial_device_->enableDataStream(mscl::MipTypes::DataClass::CLASS_SYSTEM);
+  }
+  catch (const mscl::Error& e)
+  {
+    MICROSTRAIN_ERROR(node_, "Unable to set system data to stream.");
     MICROSTRAIN_ERROR(node_, "  Error: %s", e.what());
     return false;
   }

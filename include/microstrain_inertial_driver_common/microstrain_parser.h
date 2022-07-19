@@ -87,6 +87,8 @@ private:
    */
   void parseRTKPacket(const mscl::MipDataPacket& packet);
 
+  void parseSystemPacket(const mscl::MipDataPacket& packet);
+
   /**
    * \brief Prints packet stats
    */
